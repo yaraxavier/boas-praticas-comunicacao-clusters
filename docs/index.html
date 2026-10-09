@@ -1,0 +1,753 @@
+<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Boas práticas entre clusters · POC A–B</title><style>*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#f4f6fa;color:#233147;font:17px/1.65 system-ui,sans-serif}aside{position:fixed;width:260px;height:100vh;overflow:auto;background:#15253c;color:white;padding:28px 22px}aside strong{display:block;font-size:22px;margin-bottom:25px}aside a{display:block;color:#dce6f5;padding:7px 0;text-decoration:none;font-size:14px}aside a:hover{color:#62e0c4}main{margin-left:260px;padding:45px 5%;max-width:1580px}header{padding:35px;background:#e5f3ee;border-left:6px solid #16816b;margin-bottom:35px}h1{font-size:38px;line-height:1.2;margin:12px 0}h2{font-size:29px;color:#122d47}h3{font-size:22px}section{background:white;padding:30px 38px;margin:24px 0;border:1px solid #dce3ec;border-radius:10px;scroll-margin-top:20px}a{color:#006b8b}p{max-width:100ch}code{background:#eef2f7;padding:2px 5px;overflow-wrap:anywhere}pre{background:#15253c;color:#e5eef8;padding:20px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px}pre code{background:none;padding:0}.table{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:14px}th,td{border:1px solid #d8e1e9;text-align:left;padding:12px;vertical-align:top}th{background:#e9f0f5}figure{margin:30px 0;border:1px solid #dce3ec;padding:18px;border-radius:8px}figure h3{margin-top:0}.crop{position:relative;overflow:hidden;background:black;width:100%}.crop img{position:absolute;max-width:none;height:auto}figcaption{font-size:14px;margin-top:12px}.full{max-width:100%}.architecture{padding:22px;background:#e5f3ee;border-left:4px solid #16816b}footer{font-size:14px;color:#526078}@media(max-width:900px){aside{position:relative;width:auto;height:auto}aside a{display:inline-block;margin-right:14px}main{margin:0;padding:18px}section{padding:20px}h1{font-size:30px}}@media print{aside{display:none}main{margin:0;padding:0}section{border:0;padding:0;break-before:page}a{color:inherit}figure{break-inside:avoid}}</style><body><aside><strong>Comunicação<br>entre clusters</strong><a href="#guia">Guia de leitura</a><a href="#modelo">Modelo geral</a><a href="#referencia">GovHub, MGI e Ipea</a><a href="#arquitetura">Arquitetura A–B</a><a href="#decisoes">Decisões</a><a href="#checklist">28 práticas</a><a href="#operacao">Operação</a><a href="#testes">Testes e resultados</a><a href="#revisoes">Revisões</a><a href="#evidencias">Fotos e evidências</a><a href="#fontes">Fontes originais</a><a href="#publicacao">Publicação</a><a href="#agentes">AGENTS.md</a></aside><main><header><span>DOCUMENTAÇÃO · POC A–B · SET–OUT 2026</span><h1>Boas práticas de segurança na comunicação entre clusters Kubernetes</h1><p>Desenvolvimento: setembro a outubro de 2026. Pesquisa, arquitetura, implementação, revisões e evidências.</p><p><strong>Instalação limpa concluída · 16 critérios aprovados · escopo de laboratório</strong></p></header><section id="guia" aria-label="Guia de leitura"><h2>Documentação completa — roteiro de leitura</h2>
+<p>A documentação pode ser lida neste repositório ou na página estática <code>docs/index.html</code>, preparada para GitHub Pages. A página é gerada a partir dos mesmos arquivos Markdown para evitar versões editoriais divergentes.</p>
+<div class="table"><table>
+<tr><th>Ordem</th><th>Documento</th><th>Pergunta respondida</th></tr>
+<tr><td>1</td><td><a href="#modelo">Modelo geral</a></td><td>Qual o problema, a teoria e o método?</td></tr>
+<tr><td>2</td><td><a href="#referencia">Referência GovHub/MGI/Ipea</a></td><td>De onde veio o contexto e o que é proposta própria?</td></tr>
+<tr><td>3</td><td><a href="#arquitetura">Arquitetura</a></td><td>Quais componentes e fluxos foram implementados?</td></tr>
+<tr><td>4</td><td><a href="#decisoes">Decisões</a></td><td>Por que cada escolha e quais seus custos?</td></tr>
+<tr><td>5</td><td><a href="#checklist">Checklist</a></td><td>Como avaliar as 28 práticas?</td></tr>
+<tr><td>6</td><td><a href="#operacao">Operação</a></td><td>Como preparar, executar, coletar e encerrar?</td></tr>
+<tr><td>7</td><td><a href="#testes">Testes e resultados</a></td><td>O que foi testado, aprovado e o que falta?</td></tr>
+<tr><td>8</td><td><a href="#revisoes">Revisões</a></td><td>O que deu erro e como foi corrigido?</td></tr>
+<tr><td>9</td><td><a href="#evidencias">Evidências da instalação limpa</a></td><td>Quais registros sustentam a conclusão?</td></tr>
+<tr><td>10</td><td><a href="#fontes">Fontes</a></td><td>Quais documentos originais foram consultados?</td></tr>
+</table></div>
+<h3>Organização dos testes</h3>
+<ul>
+<li><code>tests/test_probe.py</code>: 7 testes locais do cliente HTTPS com servidor simulado.</li>
+<li><code>tests/test_checklist.py</code>: 4 testes do registro documental e requisitos de evidência.</li>
+<li><code>tests/test_leak_demo.py</code>: 2 testes da demonstração de sanitização de logs.</li>
+<li><code>scripts/lab.py test</code>: execução real no laboratório, com dez Jobs e seis verificações adicionais, totalizando 16 critérios.</li>
+<li><code>evidence/public/2026-10-09-instalacao-limpa/</code>: rodada atual, prints, transcrição identificada e manifesto de integridade.</li>
+<li><code>evidence/public/VALIDACAO_AUTORA.md</code>: registro histórico da rodada anterior; não representa o estado atual da instalação limpa.</li>
+</ul>
+<p>Os testes locais verificam o cliente e utilitários. Os testes reais verificam os cenários Kubernetes descritos na matriz. Não somar 13 e 16 como se fossem controles equivalentes.</p>
+<h3>Fotos e rastreabilidade</h3>
+<p>Os PNGs originais ficam junto da rodada em <code>evidence/public/</code>. A página de leitura enquadra apenas a área relevante de cada figura, com legenda e link para o original integral. O enquadramento é feito na apresentação, sem reconstruir texto ou modificar pixels. As cópias em <code>docs/assets/</code> tornam o site independente de arquivos fora da pasta publicada.</p>
+<p>Para atualizar: editar os Markdown, executar <code>python3 scripts/build_docs.py</code> e revisar a página. Não editar o HTML gerado manualmente.</p></section><section id="modelo" aria-label="Modelo geral"><h2>Modelo geral de boas práticas</h2>
+<p><strong>Período de desenvolvimento: setembro a outubro de 2026.</strong> O trabalho compreende pesquisa, definição do recorte, decisões de arquitetura, implementação e revisão. As datas específicas de execução são registradas nas evidências.</p>
+<h3>1. Problema e pergunta</h3>
+<p>Uma aplicação pode alcançar um serviço em outro cluster e ainda assim usar identidade errada, permissões excessivas ou credenciais duradouras. A pergunta desta proposta é: como permitir a comunicação necessária, restringir o alcance de um comprometimento e produzir evidências de que os controles funcionam?</p>
+<p>O objeto é a comunicação entre clusters Kubernetes. A POC escolhe um fluxo concreto: uma aplicação em A busca um segredo fictício no OpenBao em B. Não cobre todos os serviços ou protocolos de uma organização.</p>
+<h3>2. Origem do modelo</h3>
+<p>Este é um modelo próprio de avaliação, fundamentado na documentação de Kubernetes e OpenBao e contextualizado pelo projeto público GovHub. Não é uma norma oficial, um framework publicado por MGI/Ipea ou cópia do modelo de segurança do OpenBao. A referência GovHub oferece um caso de pipelines e integrações; a distribuição em A/B é uma proposta experimental deste trabalho. As fontes estão em <a href="#fontes">FONTES</a>.</p>
+<p>O uso de assistência de IA na elaboração não transfere responsabilidade: a autora e os revisores devem conferir código, fontes, resultados e adequação ao ambiente. O modelo exato de IA não é registrado como evidência técnica do laboratório; não há base para atribuir a ele validação independente.</p>
+<h3>3. Fundamentos</h3>
+<p><strong>Confidencialidade:</strong> limitar quem lê dados. <strong>Integridade:</strong> restringir alterações e autenticar endpoints. <strong>Disponibilidade:</strong> manter o serviço utilizável e prever falhas. TLS protege o transporte, mas um cliente autenticado pode receber um segredo e vazá-lo depois.</p>
+<p>Autenticação responde quem apresenta uma identidade. Autorização decide quais ações essa identidade pode realizar. A identidade da ServiceAccount de A é avaliada pela autoridade Kubernetes de A; o token emitido pelo OpenBao recebe uma política de acesso. RBAC Kubernetes e ACL OpenBao são controles diferentes.</p>
+<p>Segmentação limita caminhos de rede; não identifica sozinha o usuário da aplicação. A política de rede depende do CNI e do caminho efetivo do pacote. NAT pode mudar o endereço observado. Por isso, aplicar YAML não comprova isolamento.</p>
+<p>Privilégio mínimo reduz operações e dados acessíveis. Credenciais temporárias limitam a janela de abuso, mas um token válido roubado continua utilizável até expirar ou ser revogado. Defesa em profundidade combina controles para riscos distintos; quantidade de ferramentas não é medida de segurança.</p>
+<p>Segurança não é necessariamente o oposto de eficiência. Alguns controles adicionam latência e esforço operacional; padronização e automação podem reduzir erros e retrabalho. Esta POC não mediu desempenho nem demonstra ganho ou perda quantitativa.</p>
+<h3>4. Classificação dos ativos</h3>
+<div class="table"><table>
+<tr><th>Classe</th><th>Exemplo</th><th>Tratamento proposto</th></tr>
+<tr><td>Dado pessoal</td><td>Nome, CPF ou identificador associado a pessoa natural</td><td>Finalidade, acesso necessário e retenção definida</td></tr>
+<tr><td>Dado pessoal sensível</td><td>Saúde, biometria vinculada à pessoa, opinião política</td><td>Controles proporcionais e enquadramento conforme art. 5º, II, da LGPD</td></tr>
+<tr><td>Credencial</td><td>Senha, JWT, token OpenBao, chave privada, kubeconfig com material de autenticação</td><td>Acesso mínimo, expiração ou rotação, revogação e exclusão de repositórios/logs</td></tr>
+<tr><td>Informação técnica confidencial</td><td>Endereços internos, configurações e metadados de auditoria</td><td>Publicação revisada e acesso conforme necessidade</td></tr>
+<tr><td>Dado sintético</td><td>Mensagens fictícias da POC</td><td>Uso exclusivo nos testes e identificação explícita</td></tr>
+</table></div>
+<p>Uma senha não é automaticamente dado pessoal sensível na classificação legal. Pode ser informação de segurança crítica e também estar associada a uma pessoa. Um CPF é dado pessoal, mas não integra automaticamente a categoria legal de dados sensíveis. As categorias técnicas e legais não são equivalentes [R16].</p>
+<h3>5. Método de aplicação</h3>
+<ol>
+<li>Inventariar origem, destino, porta, protocolo, finalidade, identidade, ativo e responsável.</li>
+<li>Identificar ameaças e impacto: interceptação, identidade indevida, permissões excessivas, token vazado e interrupção.</li>
+<li>Escolher controles proporcionais, registrando alternativa, benefício, custo e risco residual.</li>
+<li>Implementar em laboratório isolado com dados fictícios.</li>
+<li>Executar teste positivo e negativo, preservar evidências e avaliar falsos positivos.</li>
+<li>Revisar resultados com pessoa responsável, registrar pendências e repetir após mudanças.</li>
+</ol>
+<p>A unidade de avaliação é a prática com evidência, não a ferramenta instalada. Usar o <a href="#checklist">checklist de 28 práticas</a> e o <a href="#decisoes">registro de decisões</a>. Cada item exige responsável, data, evidência e justificativa. O formulário pode ser criado por <code>python3 scripts/checklist.py init</code> e analisado por <code>python3 scripts/checklist.py report</code>. Ele verifica preenchimento, não descobre controles nem certifica segurança.</p>
+<h3>6. Governança e administração</h3>
+<p>A proposta da autora é um único titular humano de administração geral ativa, com conta individual, evitando contas compartilhadas e distribuição rotineira de privilégios globais. Demais pessoas e workloads recebem apenas o necessário. Essa é uma decisão de governança deste trabalho, não exigência das fontes.</p>
+<p>A concentração reduz a quantidade de acessos globais, mas cria dependência e risco de indisponibilidade. A adoção deve prever substituição formal, acesso emergencial rastreável e revisão independente; não depender de senha compartilhada. MFA, revisão periódica de acessos e processo de desligamento são requisitos a avaliar no ambiente real. Nenhum deles foi comprovado pela suíte desta POC.</p>
+<p>O root token mantido no estado local é uma simplificação do bootstrap e dos testes. Não é identidade de aplicação nem demonstra gestão de administradores em produção. Não publicá-lo. Separar responsabilidades de operação, aprovação e revisão das evidências.</p>
+<h3>7. Atualizações e ciclo de vida</h3>
+<p>Antes de atualizar: inventariar versões e imagens, ler release notes, verificar compatibilidade entre cliente/API/CNI, avaliar mudanças de configuração e preparar recuperação. Aplicar em ambiente de teste, repetir testes positivos e negativos e comparar resultados. Registrar versão anterior, nova versão, motivo, responsável e evidência. Tags facilitam o laboratório, mas digests e integridade dos manifests devem ser controlados em uma adoção real.</p>
+<p>A remoção do backend <code>file</code> e a mudança para auditoria declarativa no OpenBao 2.7 ilustram por que copiar configuração antiga é insuficiente. Atualização de software não equivale a atualização validada do sistema. Certificados, JWTs e tokens também expiram; sua renovação é parte da operação.</p>
+<h3>8. Resposta a vazamento</h3>
+<p>Conter o acesso afetado, revogar a credencial comprometida, identificar escopo e período, analisar registros preservados, corrigir a origem e emitir nova credencial quando necessário. Rotacionar também o segredo de destino se seu valor foi exposto: revogar o token do OpenBao não apaga um segredo já lido nem invalida automaticamente a senha de outro sistema.</p>
+<p>Repetir os testes após a correção e documentar o risco residual. Não publicar material comprometido como evidência. Na POC todos os valores são fictícios e o cenário de vazamento é controlado.</p>
+<h3>9. Critério de aceite e limites</h3>
+<p>A demonstração técnica exige comunicação autorizada funcionando, recusas esperadas, evidências datadas e interpretação correta. O modelo completo exige avaliação das 28 práticas, pendências e responsáveis. Uma adoção produtiva demanda ainda persistência, recuperação, disponibilidade, operação de certificados, resposta a incidentes e testes no caminho real da rede.</p>
+<p>O aceite documental não transforma resultados limitados em garantia geral. Serviço indisponível também pode causar timeout: combinar teste autorizado funcional, baseline e teste negativo reduz essa ambiguidade, mas ainda é necessário verificar onde o bloqueio ocorreu.</p></section><section id="referencia" aria-label="GovHub, MGI e Ipea"><h2>Referência real e aplicação na POC</h2>
+<p>Repositório: https://github.com/GovHub-br/data-application-mgi Commit: 9f9d94761a8867bcdd392a4b10c70b56f2e8c8da Consulta: 08/10/2026. Leitura da árvore por checkout Git somente para inspeção.</p>
+<div class="table"><table>
+<tr><th>Evidência observada</th><th>Caminho</th><th>Uso na POC</th><th>Limite da conclusão</th></tr>
+<tr><td>Airflow e dbt executam pipelines e transformações</td><td>README.md</td><td>Workload consumidor representa pipeline lendo configuração</td><td>Não executa as DAGs reais</td></tr>
+<tr><td>Compose é infraestrutura local</td><td>infra/README.md</td><td>Cenário isolado, descartável</td><td>Não descreve segurança de produção</td></tr>
+<tr><td>PostgreSQL, Superset e MinIO presentes</td><td>infra/docker-compose.yml</td><td>Motiva credenciais separadas por sistema</td><td>Não prova integração OpenBao existente</td></tr>
+<tr><td>Portas de serviços publicadas no Compose</td><td>infra/docker-compose.yml</td><td>Motiva inventário e restrição de fluxos</td><td>Firewall real não foi inspecionado</td></tr>
+<tr><td>Valores padrão de desenvolvimento</td><td>infra/docker-compose.yml</td><td>Motiva retirar credenciais reais do código e limitar acesso</td><td>Não afirmar que produção usa esses valores</td></tr>
+<tr><td>MCP com parâmetro de leitura configurável</td><td>infra/docker-compose.yml</td><td>Motiva revisão de privilégios e ações permitidas</td><td>Não conecta IA/MCP ao laboratório</td></tr>
+<tr><td>AGENTS.md ausente nesse commit</td><td>Árvore completa do checkout</td><td>Fornecido AGENTS.md próprio da POC</td><td>Não reconstruir regras anteriores sem fonte</td></tr>
+</table></div>
+<p>Separar o que foi observado do que foi proposto: a referência consultada não mostra uma topologia Kubernetes/OpenBao nesses arquivos. A arquitetura da POC é uma hipótese de laboratório para estudar comunicação segura, não uma descrição da infraestrutura deles. Não foram usados dados pessoais, credenciais reais ou serviços conectados à produção.</p>
+<p>Para integração posterior: confirmar namespaces, CNI, endpoint, autoridade CA, modelo de identidade e fluxos efetivos com responsáveis pelo ambiente; mapear políticas por pipeline; executar testes de compatibilidade do provider de secrets do Airflow; registrar versões e evidências antes de propor aplicação institucional.</p>
+<h3>Contexto institucional e comparação</h3>
+<p>A página oficial <a href="https://gov-hub.io/govhub/quem-somos/">Quem somos</a> descreve o GovHub como iniciativa de integração e qualificação de dados governamentais, originada da parceria Ipea/Lab Livre-UnB em 2024. O repositório público consultado contém pipelines vinculados ao contexto MGI. Essa associação não demonstra que o MGI opera Kubernetes/OpenBao na topologia proposta.</p>
+<div class="table"><table>
+<tr><th>Dimensão</th><th>Referência pública consultada</th><th>Proposta deste trabalho</th></tr>
+<tr><td>Objetivo</td><td>Integrar e transformar dados governamentais</td><td>Avaliar controles da comunicação entre clusters</td></tr>
+<tr><td>Aplicação</td><td>Airflow/dbt e integrações de dados</td><td>Job sintético representando consumidor</td></tr>
+<tr><td>Infraestrutura inspecionada</td><td>Arquivos de desenvolvimento local e código público</td><td>Dois clusters kind no mesmo host</td></tr>
+<tr><td>Segredos</td><td>Necessidade de credenciais nas integrações</td><td>OpenBao com identidade e escopo por consumidor</td></tr>
+<tr><td>Evidência</td><td>Código/documentação públicos</td><td>Testes controlados e resultados informados</td></tr>
+<tr><td>Adoção institucional</td><td>Não verificada por acesso ao ambiente real</td><td>Não implantada ou homologada institucionalmente</td></tr>
+</table></div>
+<p>A mudança proposta é tornar explícitas as fronteiras, permissões e verificações de um fluxo. Não é possível afirmar melhoria percentual de segurança, superioridade sobre a produção atual ou substituição recomendada da arquitetura institucional sem avaliação do ambiente real.</p>
+<p>O modelo foi elaborado para este trabalho; a inspiração funcional vem do cenário de integração GovHub e os mecanismos vêm das documentações originais. Não houve cópia de um AGENTS.md institucional. O repositório de referência não é incluído no pacote.</p>
+<h3>Exemplo público de uso da tecnologia</h3>
+<p>A documentação administrativa do <a href="https://docs.gitlab.com/administration/secrets_manager/">GitLab Secrets Manager</a> descreve uso de OpenBao. É exemplo de adoção da tecnologia, não prova de que esta POC reproduz o desenho ou atende aos requisitos do GitLab. A existência de outros usuários não substitui nossos testes.</p>
+<p>Consulta das páginas de contexto: 09/10/2026. Consulta do checkout de referência: 08/10/2026; commit fixado acima.</p></section><section id="arquitetura" aria-label="Arquitetura A–B"><h2>Arquitetura implementada na POC A–B</h2>
+<h3>Componentes e fronteiras</h3>
+<p>Dois clusters kind independentes compartilham o host Docker do laboratório. A separação representa autoridades Kubernetes distintas; não oferece isolamento físico contra comprometimento do host.</p>
+<div class="architecture"><strong>Cluster A · sbd-app</strong><p>Job reader → HTTPS / NodePort 30200 → OpenBao em B</p><strong>Cluster B · sbd-bao</strong><p>OpenBao → HTTPS 6443 / TokenReview → API Kubernetes de A</p><p>PebbleDB e auditoria em volume efêmero de B. Administração via port-forward local.</p></div><details><summary>Diagrama Mermaid para GitHub</summary><pre>flowchart TD
+  subgraph A[&quot;Cluster A · sbd-app&quot;]
+    P[&quot;Job consumidor · reader&quot;]
+    K[&quot;API Kubernetes A · TokenReview&quot;]
+  end
+  subgraph B[&quot;Cluster B · sbd-bao&quot;]
+    S[&quot;NodePort 30200&quot;]
+    O[&quot;OpenBao · TLS 8200&quot;]
+    D[&quot;PebbleDB e auditoria · emptyDir&quot;]
+  end
+  P --&gt;|&quot;HTTPS e JWT&quot;| S
+  S --&gt; O
+  O --&gt;|&quot;HTTPS 6443 · reviewer&quot;| K
+  O --&gt; D</pre></details>
+<p>O fluxo de negócio parte de A para B. B consulta a API de A para validar a identidade; portanto há comunicação de retorno B→A com finalidade e porta específicas. Não há malha geral de comunicação Pod a Pod, mTLS, service mesh ou federação de identidades.</p>
+<div class="table"><table>
+<tr><th>Componente</th><th>Implementação</th><th>Motivo e limite</th></tr>
+<tr><td>Ambiente</td><td>kind, um nó por cluster, Docker</td><td>Reprodução local; sem HA nem isolamento de host</td></tr>
+<tr><td>Rede</td><td>Calico 3.29.3 e NetworkPolicy</td><td>Aplicação de regras; NAT e tráfego de nó exigem validação</td></tr>
+<tr><td>Consumidor</td><td>Job Python no namespace poc de A</td><td>Simula aplicação; não executa DAG real do GovHub</td></tr>
+<tr><td>Identidade</td><td>ServiceAccount reader com JWT projetado</td><td>Audience openbao, duração solicitada de 600 s</td></tr>
+<tr><td>Validação</td><td>ServiceAccount reviewer em A</td><td>Somente criar TokenReviews; token solicitado de 1 h</td></tr>
+<tr><td>Segredos</td><td>OpenBao 2.7.1 em B</td><td>KV v2 e ACL de leitura por caminho</td></tr>
+<tr><td>Transporte</td><td>CA local e certificado de servidor de 7 dias</td><td>Verifica CA e nome/IP; cliente sem certificado mTLS</td></tr>
+<tr><td>Estado</td><td>PebbleDB e audit.json em emptyDir</td><td>Sobrevive a reinício de contêiner no mesmo Pod; perdido ao excluir/substituir o Pod</td></tr>
+<tr><td>Administração</td><td>kubectl e port-forward 127.0.0.1:18200</td><td>Bootstrap local com root; material fica em .state</td></tr>
+</table></div>
+<h3>Fluxos permitidos e finalidade</h3>
+<div class="table"><table>
+<tr><th>ID</th><th>Origem → destino</th><th>Porta/protocolo</th><th>Finalidade</th></tr>
+<tr><td>F01</td><td>Job A → IP do nó B → OpenBao</td><td>TCP 30200 → 8200, HTTPS</td><td>Login e leitura de segredo fictício</td></tr>
+<tr><td>F02</td><td>OpenBao B → API do nó A</td><td>TCP 6443, HTTPS</td><td>TokenReview com autoridade de A</td></tr>
+<tr><td>F03</td><td>Operador → port-forward local → serviço B</td><td>TCP 18200 → 8200, HTTPS</td><td>Inicialização e configuração administrativa</td></tr>
+<tr><td>F04</td><td>Probe local B → serviço B</td><td>TCP 8200, HTTPS</td><td>Controle experimental de bloqueio local</td></tr>
+</table></div>
+<p>Os CIDRs de Pods são 192.168.0.0/17 em A e 192.168.128.0/17 em B. IPs dos nós são descobertos via Docker e não devem ser fixados a partir de um print. Os CIDRs distintos evitam sobreposição neste laboratório, mas não criam roteamento entre Pods dos clusters.</p>
+<h3>Autenticação e autorização</h3>
+<ol>
+<li>O Job lê JWT projetado e valida certificado do OpenBao.</li>
+<li>Envia JWT ao mount <code>auth/cluster-a</code>, role <code>reader</code>.</li>
+<li>OpenBao consulta a API Kubernetes de A usando o reviewer.</li>
+<li>A role vincula namespace <code>poc</code>, ServiceAccount <code>reader</code> e audience <code>openbao</code>.</li>
+<li>OpenBao emite token com TTL e máximo configurados de 300 s; role experimental de expiração usa 30 s.</li>
+<li>ACL permite ler <code>secret/data/app/config</code>. O caminho <code>secret/data/other/config</code> e ações administrativas devem ser recusados.</li>
+</ol>
+<p><code>reader</code> não recebe permissão de ler Kubernetes Secrets ou criar Pods. O reviewer recebe apenas a permissão de validação requerida. As credenciais e os tokens de cada camada não são intercambiáveis.</p>
+<h3>NetworkPolicies efetivas</h3>
+<p>Em A, <code>probe-egress</code> seleciona Pods <code>app=probe</code> e restringe saída aos destinos e portas configurados para B. Em B, <code>bao-ingress</code> seleciona OpenBao, limita saída à API de A e permite entrada dos IPs dos nós A/B e de probes locais com rótulo autorizado. As regras são específicas aos Pods selecionados; não implementam um default-deny universal em todos os namespaces.</p>
+<p>A permissão dos IPs dos nós acomoda o caminho NodePort do laboratório. Ela não distingue todas as identidades de workloads que podem aparecer após SNAT. O caso <code>network-denied</code> é local a B. O teste não prova uma fronteira de rede impermeável entre clusters.</p>
+<h3>Endurecimento e estado</h3>
+<p>Namespace usa Pod Security restricted v1.31. Contêineres usam usuário não root, sem escalada de privilégios, capacidades removidas, raiz somente leitura, seccomp RuntimeDefault e limites de recursos. Os volumes necessários continuam graváveis. Esses controles reduzem superfície; não demonstram resistência a escape de contêiner.</p>
+<p>OpenBao usa TLS, modo servidor normal e auditoria declarativa. Há apenas uma réplica; unseal 1/1 e root em arquivo local são concessões de laboratório. Não há backup/restore, armazenamento persistente, auto-unseal, rotação automática de CA ou coletor de auditoria externo.</p>
+<h3>Versões e reprodutibilidade</h3>
+<p>O script fixa <code>kindest/node:v1.31.4</code>, Calico 3.29.3 e OpenBao 2.7.1; o probe usa <code>python:3.12-alpine</code>, uma tag mutável. A autora informou kubectl 1.36.0, Docker 29.1.3, Python 3.12.3, OpenSSL 3.0.13 e kind 0.32.0-alpha. A execução observada não comprova compatibilidade suportada desse conjunto; kubectl 1.36 e API 1.31 estão fora da diferença de uma versão minor suportada para esse cliente, conforme a política oficial. Corrigir esse desvio antes de nova reprodução. Preferir cliente dentro da política de version skew e uma combinação suportada em adoção real.</p>
+<p>Digest OpenBao observado no diagnóstico da autora: <code>sha256:6d2b93856e3fcf7b18ad855a0b51eaba474dc8b79cf554379ea32034797d2acf</code>. O script permite <code>POC_BAO_IMAGE</code>; alterar a imagem exige repetir a validação. O digest observado não é uma análise de vulnerabilidades.</p></section><section id="decisoes" aria-label="Decisões"><h2>Registro de decisões e efeitos</h2>
+<p>Versão 4.0. Justificativas explícitas da POC; efeitos positivos são esperados, não ganhos já medidos.</p>
+<h3>D01 - Dois clusters independentes</h3>
+<p>Por que foi escolhida: Tornar explícita a fronteira entre consumidor e autoridade de segredos e manter o recorte entre clusters.</p>
+<p>Efeito positivo esperado: Permite examinar endpoints e identidades de autoridades distintas.</p>
+<p>Efeito negativo ou risco residual: Mais consumo e complexidade de rota; não produz conectividade geral entre Pods.</p>
+<p>Alternativa considerada: Um cluster com namespaces seria mais simples, mas não representaria a fronteira pretendida.</p>
+<p>Como verificar: Conferir APIs distintas e os fluxos F01/F02.</p>
+<p>Condição de revisão: Reavaliar topologia se o ambiente real tiver outra separação de autoridades.</p>
+<p>Fontes de apoio: [R01], [R03]. A seleção concreta é uma decisão desta POC.</p>
+<h3>D02 - Kind para reprodução local</h3>
+<p>Por que foi escolhida: Facilitar um laboratório descartável que a autora possa testar em Linux.</p>
+<p>Efeito positivo esperado: Criação e limpeza delimitadas; não exige contratar infraestrutura.</p>
+<p>Efeito negativo ou risco residual: Rede Docker e kubeconfig local diferem da operação institucional.</p>
+<p>Alternativa considerada: Clusters gerenciados ou VMs seriam mais representativos, com mais requisitos de acesso e recursos.</p>
+<p>Como verificar: Criar os clusters, confirmar versões e contextos; rejeitar nomes preexistentes.</p>
+<p>Condição de revisão: Se o objetivo passar a disponibilidade ou desempenho institucional, substituir o cenário local.</p>
+<p>Fontes de apoio: [R08]. A seleção concreta é uma decisão desta POC.</p>
+<h3>D03 - Calico como CNI do ensaio</h3>
+<p>Por que foi escolhida: A política de rede precisa de um mecanismo que a aplique, não apenas de YAML aceito pela API.</p>
+<p>Efeito positivo esperado: Oferece um caminho de enforcement para os testes propostos.</p>
+<p>Efeito negativo ou risco residual: Adiciona componentes, permissões e manutenção; NAT pode afetar a interpretação.</p>
+<p>Alternativa considerada: Usar a CNI já aprovada no ambiente real pode evitar um componente novo; comprovar seu suporte.</p>
+<p>Como verificar: Testar acesso permitido/bloqueado e investigar origem efetiva.</p>
+<p>Condição de revisão: Não instalar Calico sobre CNI institucional somente por ser a escolha do laboratório.</p>
+<p>Fontes de apoio: [R07], [R08]. A seleção concreta é uma decisão desta POC.</p>
+<h3>D04 - OpenBao para o fluxo de segredos</h3>
+<p>Por que foi escolhida: Demonstrar autenticação e autorização de consumidor que acessa configuração mantida em outro cluster.</p>
+<p>Efeito positivo esperado: Centraliza o ponto de política e permite testar validade e revogação.</p>
+<p>Efeito negativo ou risco residual: Torna-se dependência operacional; falha do servidor ou cliente autorizado comprometido ainda importa.</p>
+<p>Alternativa considerada: Secrets nativos ou gerenciador já adotado podem bastar em outros contextos; comparar requisitos antes de acrescentar serviço.</p>
+<p>Como verificar: Login, leitura restrita, negação administrativa e resposta à revogação.</p>
+<p>Condição de revisão: Remover ou substituir se não houver requisito que justifique operação e manutenção adicionais.</p>
+<p>Fontes de apoio: [R02], [R06], [R10]. A seleção concreta é uma decisão desta POC.</p>
+<h3>D05 - TLS de servidor e identidade por token</h3>
+<p>Por que foi escolhida: Proteger o transporte e verificar o destino, mantendo separado o teste da identidade da aplicação.</p>
+<p>Efeito positivo esperado: Cliente rejeita CA não confiável e usa identidade específica.</p>
+<p>Efeito negativo ou risco residual: Certificados expiram; mTLS de cliente não está demonstrado nesta versão.</p>
+<p>Alternativa considerada: mTLS pode ser necessário em outro modelo de confiança, com mais gestão de certificados.</p>
+<p>Como verificar: CA inválida rejeitada; SAN e destino compatíveis; login correto.</p>
+<p>Condição de revisão: Reavaliar se o serviço exigir certificado cliente ou política de confiança diferente.</p>
+<p>Fontes de apoio: [R04]. A seleção concreta é uma decisão desta POC.</p>
+<h3>D06 - Kubernetes Auth e reviewer dedicado</h3>
+<p>Por que foi escolhida: Avaliar o vínculo entre identidade do cluster A e autorização no OpenBao B.</p>
+<p>Efeito positivo esperado: Validação usa a API da autoridade prevista com permissões delimitadas.</p>
+<p>Efeito negativo ou risco residual: Disponibilidade e renovação do reviewer influenciam o login.</p>
+<p>Alternativa considerada: JWT/OIDC é alternativa documentada, cuja validade e revogação precisam de análise própria.</p>
+<p>Como verificar: ServiceAccount/audience errados negados; reviewer cria somente TokenReview.</p>
+<p>Condição de revisão: Reconsiderar se o endpoint da API não puder ser alcançado com segurança.</p>
+<p>Fontes de apoio: [R03], [R05]. A seleção concreta é uma decisão desta POC.</p>
+<h3>D07 - TTL de laboratório e política de leitura estreita</h3>
+<p>Por que foi escolhida: Limitar alcance e tornar revogação/expiração observáveis em um ensaio curto.</p>
+<p>Efeito positivo esperado: A credencial não autoriza outros caminhos nem escrita.</p>
+<p>Efeito negativo ou risco residual: Token válido copiado ainda permite seu próprio acesso; renovação frequente tem custo.</p>
+<p>Alternativa considerada: Prazo maior reduz autenticações, mas aumenta janela de uso; definir conforme risco e operação reais.</p>
+<p>Como verificar: TTL 300 s no ensaio normal e 30 s na role de expiração; testar ambas.</p>
+<p>Condição de revisão: Esses valores são parâmetros da POC, não recomendação universal das fontes.</p>
+<p>Fontes de apoio: [R02], [R03]. A seleção concreta é uma decisão desta POC.</p>
+<h3>D08 - Um titular humano de administração geral</h3>
+<p>Por que foi escolhida: Atender à regra de governança proposta pela autora e reduzir dispersão do poder global.</p>
+<p>Efeito positivo esperado: Facilita inventário de concessões e responsabilização.</p>
+<p>Efeito negativo ou risco residual: Cria concentração de poder e risco de indisponibilidade; compromisso dessa identidade tem grande impacto.</p>
+<p>Alternativa considerada: Outra organização pode precisar de modelo de concessão temporária e custódia diferente; não transplantar a regra sem revisão.</p>
+<p>Como verificar: Inventariar concessões equivalentes, substituição e uso cotidiano de contas limitadas.</p>
+<p>Condição de revisão: A documentação Kubernetes sustenta privilégio mínimo, não exige exatamente um administrador. Unseal/custódia de chaves é decisão distinta.</p>
+<p>Fontes de apoio: [R05], [R02]. A seleção concreta é uma decisão desta POC.</p>
+<h3>D09 - Armazenamento temporário e bootstrap simplificado</h3>
+<p>Por que foi escolhida: Reduzir montagem do laboratório para observar o fluxo sem construir uma plataforma de produção.</p>
+<p>Efeito positivo esperado: Instalação pequena, baixo esforço inicial e descarte fácil.</p>
+<p>Efeito negativo ou risco residual: Recriar o Pod perde armazenamento; chave única de unseal e root retido são simplificações com risco.</p>
+<p>Alternativa considerada: Persistência, backup e custódia de chaves são necessários quando a criticidade exigir.</p>
+<p>Como verificar: Registrar limites e não declarar BP17 atendido por essa escolha.</p>
+<p>Condição de revisão: Nunca usar essa decisão como desenho de produção ou prova de recuperação.</p>
+<p>Fontes de apoio: [R02], [R09]. A seleção concreta é uma decisão desta POC.</p>
+<h3>D10 - Probes diretos, sem Agent/CSI nesta versão</h3>
+<p>Por que foi escolhida: Manter transparente o ensaio de API, token e autorização antes de adicionar mecanismo de entrega.</p>
+<p>Efeito positivo esperado: Menos componentes para diagnosticar o comportamento básico.</p>
+<p>Efeito negativo ou risco residual: Não cobre renovação automática, lifecycle nem integração real do pipeline.</p>
+<p>Alternativa considerada: Agent/CSI ou backend de secrets do consumidor podem resolver requisitos reais, após justificar privilégios e dependências.</p>
+<p>Como verificar: Testar o cliente e revisar ausência de valores privados nos logs.</p>
+<p>Condição de revisão: Reavaliar quando a aplicação tiver requisito de entrega/renovação contínua.</p>
+<p>Fontes de apoio: [R03], [R02]. A seleção concreta é uma decisão desta POC.</p>
+<h3>D11 - Log por campos operacionais controlados</h3>
+<p>Por que foi escolhida: Demonstrar uma exposição simples por excesso de conteúdo e uma saída reduzida.</p>
+<p>Efeito positivo esperado: Evita os marcadores restritos no caso testado.</p>
+<p>Efeito negativo ou risco residual: Pode retirar informação útil e não detecta todos os vazamentos ou campos novos.</p>
+<p>Alternativa considerada: Redação automática pode complementar, mas exige tratamento de falhas e teste de conteúdo.</p>
+<p>Como verificar: Executar leak_demo e revisar o que se perde ou permanece no log.</p>
+<p>Condição de revisão: Testar novos eventos antes de liberar campos; não confundir o exemplo com scanner universal.</p>
+<p>Fontes de apoio: [R06]. A seleção concreta é uma decisão desta POC.</p>
+<h3>D12 - Suíte automatizada com revisão humana</h3>
+<p>Por que foi escolhida: Repetir verificações observáveis sem terceirizar a conclusão de segurança.</p>
+<p>Efeito positivo esperado: Consistência e rastreabilidade do procedimento.</p>
+<p>Efeito negativo ou risco residual: PASS pode refletir um teste errado ou causa equivocada; simulação não valida cluster real.</p>
+<p>Alternativa considerada: Revisão manual sem automação reduz infraestrutura de teste, mas dificulta repetição; combinar conforme escopo.</p>
+<p>Como verificar: Revisar premissa, negativo, resultado e causa antes de marcar Conforme.</p>
+<p>Condição de revisão: Mudar a suíte quando o risco mudar; não aprovar somente porque ferramenta ou IA afirmou.</p>
+<p>Fontes de apoio: [R15], [R07]. A seleção concreta é uma decisão desta POC.</p>
+<h3>D13 - Não adicionar scanners, service mesh e plataformas sem requisito</h3>
+<p>Por que foi escolhida: Evitar aumentar a superfície e o custo sem identificar qual lacuna o componente trata.</p>
+<p>Efeito positivo esperado: Menos interfaces, integrações, permissões e dependências para manter.</p>
+<p>Efeito negativo ou risco residual: Adiar uma ferramenta necessária também mantém gaps; simplificar não é omitir controle obrigatório.</p>
+<p>Alternativa considerada: Adicionar componente somente com risco, responsável, teste e comparação com capacidade existente.</p>
+<p>Como verificar: Revisar BP26 e decisão da inclusão/adiamento com evidência.</p>
+<p>Condição de revisão: Se surgir gap demonstrado, reconsiderar; menos componentes não significa menos proteção necessária.</p>
+<p>Fontes de apoio: [R10]. A seleção concreta é uma decisão desta POC.</p>
+<h3>D14 - Atualização controlada, sem troca cega de versões</h3>
+<p>Por que foi escolhida: Conservar compatibilidade e proteção durante a evolução do modelo.</p>
+<p>Efeito positivo esperado: Mudança fica associada a motivo, testes e retorno.</p>
+<p>Efeito negativo ou risco residual: Exige tempo e pode manter risco enquanto correção não é aplicada.</p>
+<p>Alternativa considerada: Atualização automática exige pipeline capaz de detectar regressões e recuperar falhas.</p>
+<p>Como verificar: Aplicar BP25 e repetir verificações afetadas.</p>
+<p>Condição de revisão: Priorização conforme exposição; os números fixados no script precisam de revisão.</p>
+<p>Fontes de apoio: [R09], [R12]. A seleção concreta é uma decisão desta POC.</p>
+<h3>Nota da entrega A–B de 09/10/2026</h3>
+<p>Este catálogo registra critérios e decisões do modelo. Situações iniciais não são uma avaliação atual preenchida. Os resultados efetivamente informados estão em <a href="#testes">Testes e resultados</a>. Aprovação da suíte não torna automaticamente conformes as 28 práticas.</p></section><section id="checklist" aria-label="28 práticas"><h2>Checklist verificável do modelo de boas práticas</h2>
+<p>Versão 4.0 | 08/10/2026. São 28 práticas. Cada situação inicial é Pendente. P0 indica pré-condição crítica; P1 indica análise contextual complementar. Fontes sustentam mecanismos, não todas as escolhas. Prioridade não é pontuação de segurança.</p>
+<h3>BP01 - Inventariar os fluxos entre clusters (P0)</h3>
+<p>Risco: Comunicação necessária não identificada ou exposição de interfaces sem finalidade.</p>
+<p>Prática recomendada: Registrar origem, destino, porta, protocolo, aplicação, identidade, ativo e justificativa de cada fluxo.</p>
+<p>Como verificar: Comparar inventário com manifests, Services, endpoints e tráfego observado no ambiente.</p>
+<p>Evidência exigida: Inventário datado, desenho dos fluxos e configuração correspondente, sem credenciais.</p>
+<p>Critério de atendimento: Cada fluxo permitido possui finalidade e responsável; fluxos desconhecidos permanecem pendentes até investigação.</p>
+<p>Impacto possível: Esforço inicial de levantamento e manutenção quando a arquitetura muda.</p>
+<p>Situação na demonstração: Documentado para o laboratório; confirmação por observação de tráfego ainda pendente.</p>
+<p>Decisões associadas: D01. Fontes de apoio: [R01].</p>
+<h3>BP02 - Delimitar fronteiras e autoridades de identidade (P0)</h3>
+<p>Risco: Confundir clusters diferentes ou atribuir a mesma autoridade a contas homônimas.</p>
+<p>Prática recomendada: Identificar API, CA, namespaces, contas e mount de autenticação por cluster consumidor.</p>
+<p>Como verificar: Conferir o endpoint configurado e autenticar uma identidade de cada autoridade efetivamente utilizada.</p>
+<p>Evidência exigida: Mapa de confiança e configuração de mounts, endpoints e CAs.</p>
+<p>Critério de atendimento: Toda identidade é vinculada à autoridade prevista; novo consumidor não é incluído sem configuração e teste específicos.</p>
+<p>Impacto possível: Configuração adicional por cluster e maior responsabilidade sobre rotação de confiança.</p>
+<p>Situação na demonstração: Dois clusters criados na instalação limpa de 09/10/2026; A é consumidor com mount próprio. Sem terceiro cluster.</p>
+<p>Decisões associadas: D01, D06. Fontes de apoio: [R03].</p>
+<h3>BP03 - Verificar TLS em todos os fluxos sensíveis (P0)</h3>
+<p>Risco: Intercepção de JWT, segredo ou credencial e conexão com servidor indevido.</p>
+<p>Prática recomendada: Usar HTTPS com CA confiável e hostname/IP compatível com SAN, sem desabilitar validação; aplicar TLS também ao TokenReview.</p>
+<p>Como verificar: Teste positivo com certificado válido e negativo com CA não confiável; revisar destino, SAN e validade.</p>
+<p>Evidência exigida: Resultados de handshake e rejeição específica de certificado, sem chave privada.</p>
+<p>Critério de atendimento: Fluxo válido funciona e certificado não confiável é rejeitado por causa TLS identificada; conexão em claro não é aceita como alternativa.</p>
+<p>Impacto possível: Handshake, gestão de certificados e custo de renovação; medir impacto em vez de presumir.</p>
+<p>Situação na demonstração: Comunicação autorizada e rejeição de CA não confiável aprovadas na rodada real de 09/10/2026. Inspeção independente de todos os fluxos TLS permanece pendente.</p>
+<p>Decisões associadas: D05. Fontes de apoio: [R04].</p>
+<h3>BP04 - Controlar o ciclo de vida de certificados (P0)</h3>
+<p>Risco: Expiração interrompe o serviço ou confiança antiga permanece ativa.</p>
+<p>Prática recomendada: Definir emissor, validade, proprietário, renovação, distribuição de CA e procedimento de substituição.</p>
+<p>Como verificar: Simular renovação e verificar acesso após troca; examinar alerta de vencimento.</p>
+<p>Evidência exigida: Procedimento e registro de teste de renovação, com datas e responsáveis.</p>
+<p>Critério de atendimento: Renovação e recuperação de falha documentadas e verificadas dentro do prazo operacional definido.</p>
+<p>Impacto possível: Manutenção recorrente e possível janela de atualização.</p>
+<p>Situação na demonstração: Certificados de laboratório de sete dias; renovação automática não implementada.</p>
+<p>Decisões associadas: D05, D14. Fontes de apoio: [R04], [R12].</p>
+<h3>BP05 - Usar identidade específica por consumidor (P0)</h3>
+<p>Risco: Credenciais compartilhadas ampliam alcance e dificultam rastreamento.</p>
+<p>Prática recomendada: Separar ServiceAccounts por aplicação e autorizar nome e namespace específicos no OpenBao.</p>
+<p>Como verificar: Executar login da conta permitida e da conta outsider.</p>
+<p>Evidência exigida: Configuração da role e logs de login permitido/rejeitado.</p>
+<p>Critério de atendimento: Conta legítima aceita; conta fora do vínculo rejeitada; exceções têm justificativa e prazo.</p>
+<p>Impacto possível: Mais contas e políticas para manter; melhora atribuição de acesso.</p>
+<p>Situação na demonstração: wrong-sa aprovado na rodada real de 09/10/2026; a identidade outsider foi recusada conforme o teste.</p>
+<p>Decisões associadas: D06, D07. Fontes de apoio: [R03], [R05].</p>
+<h3>BP06 - Restringir audience e prazo do JWT (P0)</h3>
+<p>Risco: Token emitido para outra finalidade é reaproveitado indevidamente.</p>
+<p>Prática recomendada: Projetar token com audience específica e expiração; desligar montagem automática onde não necessária.</p>
+<p>Como verificar: Tentar login com audience válida e incorreta; revisar volume projetado e validade emitida.</p>
+<p>Evidência exigida: Manifest do consumidor e resultados dos testes, sem JWT.</p>
+<p>Critério de atendimento: Audience indevida é rejeitada e tokens não são mantidos como Secrets permanentes por conveniência.</p>
+<p>Impacto possível: Renovação e compatibilidade das aplicações precisam ser verificadas.</p>
+<p>Situação na demonstração: wrong-audience aprovado na rodada real de 09/10/2026; JWT projetado solicita 600 s. Expiração do JWT Kubernetes não foi testada separadamente da expiração do token OpenBao.</p>
+<p>Decisões associadas: D06. Fontes de apoio: [R03].</p>
+<h3>BP07 - Limitar o reviewer de autenticação (P0)</h3>
+<p>Risco: Validador ganha poder além do necessário ou sua expiração interrompe autenticação.</p>
+<p>Prática recomendada: Conta reviewer dedicada com create em tokenreviews; CA e API corretas; estratégia explícita de renovação.</p>
+<p>Como verificar: Verificar can-i para TokenReview e Secrets; testar login após renovação e após falha controlada.</p>
+<p>Evidência exigida: Regras RBAC, can-i e procedimento de rotação do reviewer.</p>
+<p>Critério de atendimento: Reviewer pode validar tokens e não ler Secrets; ciclo de renovação é conhecido e testado.</p>
+<p>Impacto possível: Complexidade operacional e dependência da API remota.</p>
+<p>Situação na demonstração: Verificações RBAC do reviewer aprovadas na rodada real de 09/10/2026; renovação feita ao executar test. Automação contínua não implementada.</p>
+<p>Decisões associadas: D06. Fontes de apoio: [R03], [R05].</p>
+<h3>BP08 - Aplicar autorização mínima por caminho (P0)</h3>
+<p>Risco: Aplicação lê segredos de outras aplicações ou altera configurações.</p>
+<p>Prática recomendada: Política por recurso e ação: permitir apenas caminhos e capacidades necessários.</p>
+<p>Como verificar: Ler caminho próprio, ler caminho de outro consumidor e tentar escrita.</p>
+<p>Evidência exigida: Policy e logs allowed_read, foreign_path_denied e write_denied.</p>
+<p>Critério de atendimento: Acesso necessário funciona; leitura estrangeira e escrita desnecessária são negadas.</p>
+<p>Impacto possível: Políticas mais detalhadas e revisão quando a aplicação muda.</p>
+<p>Situação na demonstração: authorized, leaked-token e attack-chain aprovados na rodada real de 09/10/2026; leitura do próprio escopo permitida e expansão de permissões recusada nos casos testados.</p>
+<p>Decisões associadas: D07. Fontes de apoio: [R02].</p>
+<h3>BP09 - Restringir fluxos de entrada e saída (P0)</h3>
+<p>Risco: Pod comprometido usa caminhos de rede que não são necessários.</p>
+<p>Prática recomendada: Aplicar políticas explícitas de origem, destino e porta e comprovar suporte de enforcement da CNI.</p>
+<p>Como verificar: Comparar baseline e pós-controle com serviço saudável; tentar acesso de origem não permitida.</p>
+<p>Evidência exigida: Políticas aplicadas, sucesso legítimo, bloqueio e, quando disponível, registros do CNI.</p>
+<p>Critério de atendimento: Fluxos necessários continuam operacionais e tentativas fora do escopo são bloqueadas com causa identificável.</p>
+<p>Impacto possível: Regras podem quebrar dependências legítimas; exige levantamento e diagnóstico.</p>
+<p>Situação na demonstração: network-denied aprovado em 08/10 e na instalação limpa de 09/10/2026; bloqueio demonstrado localmente em B, sem comprovação de isolamento de workloads externos.</p>
+<p>Decisões associadas: D03. Fontes de apoio: [R07], [R08].</p>
+<h3>BP10 - Validar o efeito de NAT e da exposição externa (P0)</h3>
+<p>Risco: Regras baseadas em IP passam a representar o nó ou gateway, não a aplicação.</p>
+<p>Prática recomendada: Mapear NodePort, LoadBalancer, NAT e firewall; definir onde cada controle enxerga a origem efetiva.</p>
+<p>Como verificar: Examinar IP/porta antes e depois da tradução e testar dois consumidores remotos com permissões distintas.</p>
+<p>Evidência exigida: Diagrama de encaminhamento, registros de origem e testes entre consumidores.</p>
+<p>Critério de atendimento: Não se atribui isolamento por identidade remota a uma regra que apenas permite o IP compartilhado de nó/gateway.</p>
+<p>Impacto possível: Pode exigir firewall, gateway ou mudança de topologia; custo depende do ambiente.</p>
+<p>Situação na demonstração: Limite documentado; isolamento por identidade remota não demonstrado nesta versão.</p>
+<p>Decisões associadas: D01, D03. Fontes de apoio: [R07].</p>
+<h3>BP11 - Controlar duração, revogação e renovação do token OpenBao (P0)</h3>
+<p>Risco: Token continua utilizável além da necessidade ou aplicação perde acesso por renovação mal definida.</p>
+<p>Prática recomendada: Definir TTL e máximo, testar expiração e revogação e documentar política de renovação do consumidor.</p>
+<p>Como verificar: Ler com token válido, revogar e repetir; emitir token curto, aguardar expiração e repetir.</p>
+<p>Evidência exigida: Resultados de revogação e expiração, sem valor de token.</p>
+<p>Critério de atendimento: Token inválido é negado; estratégia de continuidade para aplicação real é definida antes da adoção.</p>
+<p>Impacto possível: Autenticações adicionais e necessidade de tratar falhas sem laço infinito.</p>
+<p>Situação na demonstração: Revogação e expiração do token OpenBao aprovadas na rodada real de 09/10/2026; TTL normal de 300 s e role experimental de 30 s. Renovação contínua não implementada.</p>
+<p>Decisões associadas: D07. Fontes de apoio: [R02], [R03].</p>
+<h3>BP12 - Manter credenciais administrativas fora dos workloads (P0)</h3>
+<p>Risco: Root token, unseal key ou chave privada vazam para aplicação, Git ou relatório.</p>
+<p>Prática recomendada: Separar bootstrap de operação; aplicar acesso mínimo; não entregar root ao consumidor e não registrar segredos em logs.</p>
+<p>Como verificar: Revisar manifests, arquivos e evidências; verificar quem acessa bootstrap e seu descarte.</p>
+<p>Evidência exigida: Registro da revisão, permissões e processo de descarte, sem conteúdo sensível.</p>
+<p>Critério de atendimento: Aplicação recebe somente sua identidade e token; material administrativo tem proprietário, finalidade e retenção definidos.</p>
+<p>Impacto possível: Mais disciplina de operação e controle de acesso.</p>
+<p>Situação na demonstração: .state é local, restrito e excluído do pacote; root retido apenas para laboratório, não adequado à operação real.</p>
+<p>Decisões associadas: D08, D09. Fontes de apoio: [R02], [R06].</p>
+<h3>BP13 - Delimitar a entrega de segredos à aplicação (P1)</h3>
+<p>Risco: Segredo é persistido, exposto ou copiado sem necessidade após leitura.</p>
+<p>Prática recomendada: Escolher mecanismo de entrega compatível com o consumidor e controlar arquivo, memória, permissões e retenção.</p>
+<p>Como verificar: Inspecionar consumo, saídas e armazenamento; verificar ausência de valor sensível em logs e artefatos.</p>
+<p>Evidência exigida: Descrição do mecanismo e resultado de revisão de saídas.</p>
+<p>Critério de atendimento: Mecanismo tem justificativa e destino controlado; valores não aparecem nas evidências publicadas.</p>
+<p>Impacto possível: Agent/CSI ou backend específico podem introduzir componentes e manutenção adicionais.</p>
+<p>Situação na demonstração: Cliente Python lê dado fictício sem imprimi-lo; Agent/CSI e Airflow não integrados.</p>
+<p>Decisões associadas: D10. Fontes de apoio: [R02], [R06].</p>
+<h3>BP14 - Registrar e revisar auditoria (P1)</h3>
+<p>Risco: Acesso indevido não deixa evidência útil ou logs acabam expondo metadados sensíveis.</p>
+<p>Prática recomendada: Habilitar auditoria, restringir acesso, definir retenção e correlação de solicitações com teste/identidade.</p>
+<p>Como verificar: Gerar leitura permitida e negação; conferir que ambas podem ser correlacionadas nos registros.</p>
+<p>Evidência exigida: Registro resumido com resultado da correlação e política de retenção.</p>
+<p>Critério de atendimento: Eventos relevantes são rastreáveis sem publicação de tokens ou segredos; contagem sozinha não encerra a análise.</p>
+<p>Impacto possível: Armazenamento, processamento, revisão e custo de retenção.</p>
+<p>Situação na demonstração: Auditoria declarativa: 91 linhas na rodada de 08/10 e 85 na instalação limpa de 09/10, conforme evidências da autora; correlação manual, completude e retenção pendentes.</p>
+<p>Decisões associadas: D11, D12. Fontes de apoio: [R02].</p>
+<h3>BP15 - Reduzir privilégios dos containers (P1)</h3>
+<p>Risco: Comprometimento da aplicação permite escalada ou alterações desnecessárias.</p>
+<p>Prática recomendada: Executar sem root, sem escalada, com capacidades removidas, seccomp e escrita restrita ao necessário.</p>
+<p>Como verificar: Revisar securityContext e admissão; verificar comportamento do workload com restrições.</p>
+<p>Evidência exigida: Manifest e registro de execução sob perfil restrito.</p>
+<p>Critério de atendimento: Aplicação opera com privilégios justificados; exceções são registradas com risco e revisão.</p>
+<p>Impacto possível: Algumas imagens precisam de adaptação de permissões e caminhos de escrita.</p>
+<p>Situação na demonstração: Restrições e Pod Security restricted configurados; workloads executaram na rodada real de 09/10/2026. Não houve teste de escape ou avaliação completa de endurecimento.</p>
+<p>Decisões associadas: D08. Fontes de apoio: [R19].</p>
+<h3>BP16 - Verificar imagens e dependências (P1)</h3>
+<p>Risco: Versão vulnerável ou imagem alterada compromete o controle aplicado.</p>
+<p>Prática recomendada: Inventariar versões, fixar referência reproduzível e revisar vulnerabilidades conforme contexto.</p>
+<p>Como verificar: Registrar digest e executar varredura; avaliar achados e correções com responsável.</p>
+<p>Evidência exigida: Inventário, relatório de varredura e tratamento de achados.</p>
+<p>Critério de atendimento: Dependências conhecidas e achados relevantes tratados ou explicitamente aceitos com justificativa e prazo.</p>
+<p>Impacto possível: Atualização e correção recorrentes; possível incompatibilidade ao atualizar.</p>
+<p>Situação na demonstração: Digest OpenBao observado no diagnóstico anterior e registrado na arquitetura; tags ainda usadas no script. Não houve verificação independente da cadeia de fornecimento nem varredura de vulnerabilidades.</p>
+<p>Decisões associadas: D14. Fontes de apoio: [R19].</p>
+<h3>BP17 - Proteger disponibilidade e recuperação (P1)</h3>
+<p>Risco: Reinício, perda de armazenamento ou falha de dependência interrompe acesso.</p>
+<p>Prática recomendada: Definir persistência, recuperação, backup, unseal e disponibilidade de acordo com a criticidade.</p>
+<p>Como verificar: Simular reinício e restauração em laboratório apropriado; medir recuperação.</p>
+<p>Evidência exigida: Plano e resultado de teste de recuperação, sem chaves.</p>
+<p>Critério de atendimento: Perda ou recuperação atende requisito definido; limitações são conhecidas antes da adoção.</p>
+<p>Impacto possível: Redundância e backup consomem recursos e trabalho operacional.</p>
+<p>Situação na demonstração: emptyDir é descartável; HA, backup e recuperação persistente fora do laboratório atual.</p>
+<p>Decisões associadas: D09. Fontes de apoio: [R02], [R09].</p>
+<h3>BP18 - Controlar recursos e abuso de solicitações (P1)</h3>
+<p>Risco: Carga ou falha de consumidor esgota recursos e degrada comunicação.</p>
+<p>Prática recomendada: Definir limites, observabilidade e estratégia de tentativas; avaliar rate limiting no ponto adequado.</p>
+<p>Como verificar: Observar consumo e executar carga controlada com autorização e limites conhecidos.</p>
+<p>Evidência exigida: Registro de recursos, erros e resultado do ensaio controlado.</p>
+<p>Critério de atendimento: Saturação é detectável e o comportamento em falha é conhecido; não inferir proteção DoS apenas de limits.</p>
+<p>Impacto possível: Limites podem reduzir throughput; precisam de ajuste por demanda.</p>
+<p>Situação na demonstração: Requests/limits definidos; carga e DoS não testados.</p>
+<p>Decisões associadas: D04. Fontes de apoio: [R09].</p>
+<h3>BP19 - Medir impacto sobre desempenho e operação (P1)</h3>
+<p>Risco: Decisões de segurança são julgadas só por percepção ou comparação desigual.</p>
+<p>Prática recomendada: Comparar cenários equivalentes e separar latência, erros, consumo e esforço operacional.</p>
+<p>Como verificar: Repetir mesma carga, versões e período; registrar p50/p95, erros, CPU/memória e ações de manutenção.</p>
+<p>Evidência exigida: Tabela antes/depois com método, amostras e condições; não incluir resultados inventados.</p>
+<p>Critério de atendimento: O impacto é descrito com dados e limites acordados; ganhos ou perdas não são presumidos.</p>
+<p>Impacto possível: Coleta adicional e desenho de experimento; segurança pode custar recursos ou evitar retrabalho.</p>
+<p>Situação na demonstração: Protocolo documentado; medições ainda não realizadas.</p>
+<p>Decisões associadas: D12. Fontes de apoio: [R14].</p>
+<h3>BP20 - Executar testes positivos e negativos (P0)</h3>
+<p>Risco: Controle parece correto no arquivo mas falha em operação ou bloqueia o acesso legítimo.</p>
+<p>Prática recomendada: Associar cada item do checklist a teste e critério; confirmar serviço saudável antes de interpretar bloqueio.</p>
+<p>Como verificar: Executar matriz e investigar falhas sem remover controles apenas para obter PASS.</p>
+<p>Evidência exigida: Comando, data, ambiente, resultado e evidência revisada.</p>
+<p>Critério de atendimento: Conclusão distingue configuração escrita, teste executado e resultado comprovado.</p>
+<p>Impacto possível: Esforço de teste e manutenção da matriz após mudanças.</p>
+<p>Situação na demonstração: 13 testes locais aprovados e 16 critérios da suíte Kubernetes aprovados na instalação limpa de 09/10/2026, conforme prints recebidos e conferidos.</p>
+<p>Decisões associadas: D12. Fontes de apoio: [R07], [R15].</p>
+<h3>BP21 - Tratar gaps, exceções e responsabilidades (P0)</h3>
+<p>Risco: Não conformidade é esquecida ou não aplicável é usado para esconder falha.</p>
+<p>Prática recomendada: Atribuir responsável, ação, prazo, justificativa e revisão a cada pendência e exceção.</p>
+<p>Como verificar: Revisar formulário de avaliação e verificar evidência/justificativa dos estados.</p>
+<p>Evidência exigida: Formulário versionado e plano de ações.</p>
+<p>Critério de atendimento: P0 sem evidência permanece pendente; exceção não equivale a teste aprovado nem elimina risco.</p>
+<p>Impacto possível: Coordenação e acompanhamento; documentação passa a fazer parte da operação.</p>
+<p>Situação na demonstração: Formulário e verificador documental incluídos; preenchimento é responsabilidade da revisão.</p>
+<p>Decisões associadas: D08, D12. Fontes de apoio: [R05].</p>
+<h3>BP22 - Reavaliar após mudanças e incidentes (P1)</h3>
+<p>Risco: Checklist fica desatualizado diante de novos endpoints, versões ou consumidores.</p>
+<p>Prática recomendada: Definir gatilhos de revisão: mudança de CNI, identidade, CA, política, componente, exposição ou incidente.</p>
+<p>Como verificar: Identificar mudança e repetir itens/testes afetados; revisar periodicidade conforme criticidade.</p>
+<p>Evidência exigida: Histórico de revisão com alteração, testes repetidos e conclusões.</p>
+<p>Critério de atendimento: Estado de conformidade tem data e contexto; mudança relevante invalida evidências afetadas até nova verificação.</p>
+<p>Impacto possível: Manutenção contínua, proporcional ao risco.</p>
+<p>Situação na demonstração: Gatilhos documentados; integração a CI/CD e acompanhamento contínuo não implementados.</p>
+<p>Decisões associadas: D14. Fontes de apoio: [R05], [R12].</p>
+<h3>BP23 - Distinguir dados e credenciais (P0)</h3>
+<p>Risco: Proteger categorias inadequadamente ou ignorar o poder de acesso de uma credencial.</p>
+<p>Prática recomendada: Classificar dado pessoal, pessoal sensível, credencial e informação técnica; definir tratamento por risco e finalidade.</p>
+<p>Como verificar: Revisar inventário de campos e executar simulação de exposição por log com marcadores fictícios.</p>
+<p>Evidência exigida: Inventário classificado e resultado leak_demo, sem valores privados.</p>
+<p>Critério de atendimento: Categorias e sobreposições são explícitas; credenciais e dados restritos não aparecem na saída operacional.</p>
+<p>Impacto possível: Revisão de campos e manutenção da classificação.</p>
+<p>Situação na demonstração: Demonstração local de log incluída; classificação do ambiente real pendente.</p>
+<p>Decisões associadas: D11. Fontes de apoio: [R16], [R17], [R18].</p>
+<h3>BP24 - Manter um titular geral e limitar administração (P0)</h3>
+<p>Risco: Dispersão de privilégios, conta compartilhada e acesso excessivo a dados e infraestrutura.</p>
+<p>Prática recomendada: Um titular humano ativo de administração geral; identidades individuais e permissões por tarefa; revisar caminhos equivalentes de elevação.</p>
+<p>Como verificar: Inventariar titulares e permissões globais, políticas wildcard, bind/escalate/impersonate, criação de workloads e acesso ao host; testar contas limitadas.</p>
+<p>Evidência exigida: Inventário de concessões, responsável global, processo de substituição e testes de negação.</p>
+<p>Critério de atendimento: Um único titular geral ativo; demais identidades sem privilégio global ou equivalente injustificado; revisão de substituição e recuperação documentada.</p>
+<p>Impacto possível: Coordenação de concessões e risco de indisponibilidade do titular; acesso de recuperação precisa de controle.</p>
+<p>Situação na demonstração: Regra documental proposta; verificações RBAC de reader/reviewer aprovadas em 09/10/2026. Unicidade de administrador e governança institucional não verificadas.</p>
+<p>Decisões associadas: D08. Fontes de apoio: [R05], [R02].</p>
+<h3>BP25 - Atualizar com teste, rastreabilidade e retorno (P1)</h3>
+<p>Risco: Correções ausentes ou atualização introduz regressão e permissões excessivas.</p>
+<p>Prática recomendada: Inventário de versões, revisão de correções, ensaio controlado, plano de retorno e repetição de testes afetados.</p>
+<p>Como verificar: Registrar mudança e repetir TLS, login, autorização, rede e tokens; conferir revisão de achados de vulnerabilidade.</p>
+<p>Evidência exigida: Versões anterior/posterior, motivo, testes, decisão e pendências.</p>
+<p>Critério de atendimento: Mudança tem responsável e evidências; falha não é contornada removendo proteção de modo permanente.</p>
+<p>Impacto possível: Janela de manutenção e trabalho de compatibilidade/retorno.</p>
+<p>Situação na demonstração: Configurações de armazenamento e auditoria corrigidas para OpenBao 2.7.1, com instalação limpa e suíte aprovadas. Migração entre versões, rollback e varredura de vulnerabilidades não ensaiados.</p>
+<p>Decisões associadas: D14. Fontes de apoio: [R09], [R12].</p>
+<h3>BP26 - Justificar o conjunto mínimo de ferramentas (P0)</h3>
+<p>Risco: Complexidade e privilégios adicionados sem benefício demonstrável.</p>
+<p>Prática recomendada: Antes de adicionar ou manter um componente, registrar gap, alternativas, custo, responsável e condição de remoção.</p>
+<p>Como verificar: Revisar D01-D14 e inventário de componentes; justificar também o que não foi incluído.</p>
+<p>Evidência exigida: Registro de decisão e teste que responde ao risco.</p>
+<p>Critério de atendimento: Cada componente tem necessidade explícita; simplificação não deixa requisito obrigatório sem tratamento.</p>
+<p>Impacto possível: Pode adiar adoção e exige comparação de opções.</p>
+<p>Situação na demonstração: Regra documental entregue; revisão humana do contexto permanece necessária.</p>
+<p>Decisões associadas: D04, D10, D13. Fontes de apoio: [R10].</p>
+<h3>BP27 - Manter responsabilidade humana pela verificação (P0)</h3>
+<p>Risco: IA ou ferramenta fornece conclusão incorreta e ela é aceita sem examinar o fluxo.</p>
+<p>Prática recomendada: Revisar sugestões, fonte original, premissas, positivos/negativos e causa do resultado.</p>
+<p>Como verificar: Examinar evidência bruta e distinguir teste local simulado de cluster real.</p>
+<p>Evidência exigida: Registro de revisão humana, decisão e limitação.</p>
+<p>Critério de atendimento: Conformidade não depende apenas de opinião da IA, PASS ou ausência de alerta.</p>
+<p>Impacto possível: Tempo de revisão e necessidade de compreensão técnica.</p>
+<p>Situação na demonstração: Regra documental entregue; revisão humana do contexto permanece necessária.</p>
+<p>Decisões associadas: D12. Fontes de apoio: [R15].</p>
+<h3>BP28 - Explicitar alternativas e efeitos de cada decisão (P0)</h3>
+<p>Risco: Escolha parece obrigatória e seus custos ou riscos ficam ocultos.</p>
+<p>Prática recomendada: Registrar motivo, benefício esperado, efeito negativo, alternativa, fonte e condição de revisão.</p>
+<p>Como verificar: Relacionar cada prática ao registro Dxx e conferir o limite da fonte usada.</p>
+<p>Evidência exigida: Decisão rastreável, documentação original e evidência contextual.</p>
+<p>Critério de atendimento: Fonte sustenta a afirmação feita; escolhas próprias são identificadas e podem ser reavaliadas.</p>
+<p>Impacto possível: Mais documentação, reduzindo decisões difíceis de revisar.</p>
+<p>Situação na demonstração: Regra documental entregue; revisão humana do contexto permanece necessária.</p>
+<p>Decisões associadas: D01, D13, D14. Fontes de apoio: [R02], [R05].</p>
+<h3>Nota da entrega A–B de 09/10/2026</h3>
+<p>Este catálogo registra critérios e decisões do modelo. Situações iniciais não são uma avaliação atual preenchida. Os resultados efetivamente informados estão em <a href="#testes">Testes e resultados</a>. Aprovação da suíte não torna automaticamente conformes as 28 práticas.</p></section><section id="operacao" aria-label="Operação"><h2>Operação, coleta e encerramento</h2>
+<h3>Preparação</h3>
+<p>Use apenas máquina/laboratório autorizado com dados fictícios. São necessários Docker Engine funcional, kind, kubectl, OpenSSL, Python 3.10+ e acesso aos registries/manifests. <code>preflight</code> verifica ferramentas e Docker; não certifica recursos disponíveis ou compatibilidade. Consulte as versões em <a href="#arquitetura">Arquitetura</a>. Não há dimensionamento mínimo medido.</p>
+<p>Na raiz do pacote, antes de alterar clusters:</p>
+<pre><code>python3 scripts/lab.py preflight
+kind get clusters
+kubectl config get-contexts</code></pre>
+<p>Para ambiente novo, execute <code>python3 scripts/lab.py setup</code> e depois <code>python3 scripts/lab.py test</code>. Para A/B já configurados, execute somente <code>test</code>. O setup recusa nomes existentes. A suíte retira temporariamente as políticas próprias para produzir baseline; nunca executar em produção.</p>
+<p>O teste renova o token reviewer, gera Jobs e grava <code>evidence/results.json</code>. Aguarde conclusão; expiração e recusas de rede podem demorar. Não confundir Pod de Job Completed com serviço indisponível. OpenBao deve permanecer em execução.</p>
+<h3>Diagnóstico sem revelar credenciais</h3>
+<pre><code>kubectl --context kind-sbd-bao -n poc get pods
+kubectl --context kind-sbd-bao -n poc logs deployment/openbao --tail=80
+kubectl --context kind-sbd-app -n poc get jobs
+kubectl --context kind-sbd-bao -n poc get networkpolicy</code></pre>
+<p>Revise logs antes de compartilhar. Se ocorrer HTTP 400, registre mensagem sanitizada e etapa; não refaça init em servidor já inicializado. Se o Pod de OpenBao foi substituído, o volume efêmero pode ter sido perdido: bootstrap antigo deixa de representar o servidor novo. Não tentar resolver com desativação de TLS ou permissões globais.</p>
+<h3>Evidências antes de apagar</h3>
+<ol>
+<li>Preserve <code>evidence/results.json</code> original, horário e versão do código em armazenamento controlado.</li>
+<li>Guarde logs dos Jobs selecionados localmente após revisar segredos e dados pessoais. Registre nomes concretos a partir de <code>get jobs</code>.</li>
+<li>Capture contexto/nome dos clusters, OpenBao em execução, resultados dos Jobs e JSON final.</li>
+<li>Para publicação, recorte a região pertinente e mantenha comando, contexto e resultado legíveis. Remova credenciais antes de capturar; não alterar PASS/FAIL.</li>
+<li>Identifique as figuras e explique o que cada uma comprova. O anexo fornecido contém três recortes dos prints da autora.</li>
+</ol>
+<p>Não publicar <code>.state/bootstrap.json</code>, chaves, kubeconfig, JWTs ou valores de segredo. Auditoria bruta pode expor metadados mesmo com HMAC de campos.</p>
+<h3>Encerramento — somente depois de preservar evidências</h3>
+<pre><code>python3 scripts/lab.py cleanup
+kind get clusters</code></pre>
+<p>O cleanup remove A/B apenas quando encontra marcadores locais de propriedade. Não remove clusters de outros nomes e não apaga automaticamente <code>.state</code>. Se faltar marcador, investigar a propriedade antes de qualquer exclusão manual. Após confirmar o encerramento e não precisar recuperar o laboratório, excluir o estado sensível local de forma controlada; nunca incluí-lo no Git. A exclusão dos clusters é destrutiva para os volumes efêmeros.</p>
+<h3>Reteste após mudança</h3>
+<p>Mudanças de imagem, CNI, TLS, identidade, ACL ou política de rede exigem repetir a suíte real. Salve resultados por execução em vez de substituir a evidência histórica publicada. O teste deve falhar quando a operação autorizada é negada ou uma operação proibida é aceita.</p></section><section id="testes" aria-label="Testes e resultados"><h2>Testes, respostas e evidências</h2>
+<h3>Instalação limpa concluída — rodada atual</h3>
+<p>Em 09/10/2026 às 11:08:55 UTC, os prints recebidos mostram setup concluído, dez Jobs PASS e os mesmos 16 critérios true, com 85 linhas de auditoria. A execução foi realizada em pasta nova após remoção dos clusters anteriores, sem intervenção corretiva registrada. Ver <a href="#evidencias">evidências e transcrição</a>. A matriz abaixo se aplica às duas rodadas; a nova evidência encerra a pendência de instalação limpa nesse ambiente. Arquivos de logs e JSON originais da nova rodada ainda não foram transferidos.</p>
+<h3>Proveniência histórica — 08/10/2026</h3>
+<p>Execução informada pela autora: <strong>08/10/2026 22:00:15 UTC (19:00:15 Brasília)</strong>, depois de recuperação manual de configuração. Dez Jobs exibiram PASS; o JSON informado contém 16 critérios true e 91 linhas de auditoria. Ver <a href="assets/evidence/public/RESULTADO_INFORMADO_USUARIA.json">transcrição</a>, <a href="assets/evidence/public/VALIDACAO_AUTORA.md">proveniência</a> e <a href="assets/evidence/public/Anexo_Prints_Validacao.pdf">prints recortados</a>.</p>
+<p>O arquivo original results.json e logs completos dos Jobs não foram transferidos para revisão independente. Os prints apoiam o relato, mas não substituem logs e código. Os testes locais deste pacote usam servidor HTTPS simulado e não executam Kubernetes.</p>
+<h3>Matriz de aceite</h3>
+<p>Todos os critérios abaixo foram informados como true. True significa correspondência com a resposta esperada, inclusive quando a ação deve ser negada.</p>
+<div class="table"><table>
+<tr><th>Critério</th><th>Resposta esperada</th><th>O que demonstra e limite</th></tr>
+<tr><td>baseline_connection</td><td>Autenticar e ler antes das políticas</td><td>Caminho A→B funcional; TLS/auth continuam ativos</td></tr>
+<tr><td>baseline_unrestricted</td><td>Probe B alcança handshake TLS antes da política</td><td>Usa falha específica de CA como sinal de conectividade; não é leitura autorizada</td></tr>
+<tr><td>authorized</td><td>Login e leitura permitidos; escrita/outro caminho negados; revogação funciona</td><td>Combinação de identidade, ACL e ciclo de token</td></tr>
+<tr><td>wrong-sa</td><td>Login recusado</td><td>SA outsider não satisfaz role</td></tr>
+<tr><td>wrong-audience</td><td>Login recusado</td><td>JWT com audience inadequada não é aceito</td></tr>
+<tr><td>expired</td><td>Token de duração curta deixa de funcionar</td><td>Expiração de token OpenBao; não é teste completo de todas as credenciais</td></tr>
+<tr><td>leaked-token</td><td>Próprio escopo ainda acessível, outro escopo negado e revogação aplicada</td><td>Vazamento residual realista; não prevenção absoluta de vazamento</td></tr>
+<tr><td>attack-chain</td><td>Acesso próprio seguido de recusas à ampliação administrativa</td><td>Cadeia simulada; não exploração de CVE ou host</td></tr>
+<tr><td>tls-ca</td><td>Falha de confiança na CA</td><td>Cliente recusa servidor sem CA confiável</td></tr>
+<tr><td>network-denied</td><td>Probe local B não alcança serviço após política</td><td>Restrição local; sem comprovação de isolamento externo A/B</td></tr>
+<tr><td>rbac-reader-get-secrets</td><td>no</td><td>reader sem leitura de Secrets Kubernetes</td></tr>
+<tr><td>rbac-reviewer-create-tokenreviews.authentication.k8s.io</td><td>yes</td><td>reviewer pode criar TokenReview</td></tr>
+<tr><td>rbac-reviewer-get-secrets</td><td>no</td><td>reviewer sem leitura de Secrets</td></tr>
+<tr><td>rbac-reader-create-pods</td><td>no</td><td>reader não cria Pods</td></tr>
+<tr><td>rbac-reader-create-clusterrolebindings.rbac.authorization.k8s.io</td><td>no</td><td>reader não cria vínculos globais</td></tr>
+<tr><td>audit_present</td><td>Arquivo com conteúdo</td><td>Presença de auditoria; 91 linhas na rodada anterior e 85 na instalação limpa não provam completude ou imutabilidade</td></tr>
+</table></div>
+<h3>Cenários de ameaça</h3>
+<p>O cenário simples usa identidade errada, audience errada ou token expirado. O vazamento controlado reutiliza token válido do próprio laboratório: a leitura dentro do escopo continua possível. O cenário encadeado tenta ampliar o alcance para outro segredo e interfaces administrativas, incluindo mounts, auditoria e criação arbitrária de token. O sucesso do teste consiste em observar as recusas previstas, não em comprometer um sistema real.</p>
+<h3>Resposta à pergunta do trabalho</h3>
+<p>Os resultados relatados sustentam a viabilidade de controlar um fluxo A→B por TLS, identidade Kubernetes e política OpenBao, com verificações RBAC e auditoria presente. Não sustentam a conclusão de que toda comunicação entre clusters está isolada ou que vazamentos são impossíveis. O modelo completo permanece sujeito à avaliação documental e operacional das 28 práticas.</p>
+<h3>Testes adicionais aplicáveis, ainda pendentes</h3>
+<div class="table"><table>
+<tr><th>Teste</th><th>Motivo</th><th>Evidência necessária</th></tr>
+<tr><td>Workload não autorizado em A contra B</td><td>Validar o caminho intercluster negativo</td><td>Teste positivo de controle, origem observada, decisão do CNI e resultado negativo</td></tr>
+<tr><td>Reinício/substituição e recuperação</td><td>Estado é efêmero</td><td>Ensaio com dados fictícios e procedimento de restauração</td></tr>
+<tr><td>Rotação e expiração da CA/reviewer</td><td>Credenciais temporárias afetam operação</td><td>Antes/depois e testes de autenticidade/continuidade</td></tr>
+<tr><td>Correlação de eventos de auditoria</td><td>Contagem não confirma cobertura</td><td>Eventos sanitizados por caso, retenção e controle de acesso</td></tr>
+<tr><td>Compatibilidade e atualização</td><td>Dependências e APIs mudam</td><td>Matriz suportada, release notes e repetição da suíte</td></tr>
+<tr><td>Desempenho e disponibilidade</td><td>Custos não foram medidos</td><td>Latência, erros, recursos e metodologia antes/depois</td></tr>
+</table></div>
+<p>Nenhum desses itens pendentes deve receber PASS com base na suíte já executada. O terceiro cluster não integra esta entrega.</p></section><section id="revisoes" aria-label="Revisões"><h2>O que foi revisado e corrigido</h2>
+<div class="table"><table>
+<tr><th>Problema observado</th><th>Decisão/correção</th><th>Evidência e situação</th></tr>
+<tr><td>OpenBao encerrava com <code>unknown storage type file</code></td><td>Substituir backend file por pebbledb</td><td>Logs fornecidos; servidor iniciou e storage_type retornou pebbledb</td></tr>
+<tr><td>Aviso de campo disable_mlock desconhecido</td><td>Remover configuração obsoleta</td><td>Configuração atual não contém o campo</td></tr>
+<tr><td>Habilitação de auditoria via API retornou HTTP 400</td><td>Declarar audit em server.hcl</td><td>API indicou configuração declarativa; autora confirmou auditoria após atualização/SIGHUP</td></tr>
+<tr><td>Setup interrompido após inicialização</td><td>Recuperar configuração restante mantendo clusters</td><td>Autora informou initialized=true, sealed=false; depois suíte aprovada</td></tr>
+<tr><td>Necessidade de preservar dados durante correção</td><td>Evitar recriar Pod com emptyDir</td><td>Estado atual efêmero explicitado na arquitetura</td></tr>
+<tr><td>Proposta de adicionar terceiro cluster</td><td>Retirar do recorte final por decisão da autora</td><td>Código e testes de C excluídos desta entrega</td></tr>
+<tr><td>Interpretação excessiva de PASS</td><td>Separar resultado observado e risco residual</td><td>Matriz explica leaked-token, rede local, RBAC e auditoria</td></tr>
+<tr><td>Documento geral misturado ao laboratório</td><td>Separar docs/modelo e docs/poc</td><td>Teoria reutilizável; arquitetura e resultados específicos</td></tr>
+</table></div>
+<p>Fontes das mudanças OpenBao: <a href="https://openbao.org/community/release-notes/2-7-0/">release notes 2.7</a> e <a href="https://openbao.org/docs/configuration/audit/">auditoria declarativa</a>. A configuração declarativa é carregada em reinicialização ou SIGHUP; no incidente relatado foi usado SIGHUP para preservar o Pod.</p>
+<p>A instalação limpa foi executada em 09/10/2026 na máquina da autora, com setup concluído e 16 critérios aprovados, conforme os <a href="#evidencias">prints da rodada</a>. Não confundir essa evidência real com os testes locais simulados do cliente.</p></section><section id="evidencias"><h2>Evidências da instalação limpa</h2><p>Fotos recebidas da autora e conferidas visualmente. Os enquadramentos abaixo preservam os pixels originais; somente a área exibida muda. Logs e JSON originais ainda não foram transferidos.</p><figure><h3>Figura 1 · Extração e comando de reprodução</h3><div class="crop" style="aspect-ratio:1080/345"><img src="assets/evidencias/01-extracao-e-comandos.png" alt="A pasta nova e o bloco preflight → setup → test. O print integral preserva a tentativa anterior sem o ZIP." style="width:177.777778%;left:0.000000%;top:-179.710145%"></div><figcaption>A pasta nova e o bloco preflight → setup → test. O print integral preserva a tentativa anterior sem o ZIP. <a href="assets/evidencias/01-extracao-e-comandos.png">Abrir original integral</a></figcaption></figure><figure><h3>Figura 2 · Criação de A e B</h3><div class="crop" style="aspect-ratio:1050/658"><img src="assets/evidencias/02-criacao-clusters.png" alt="Registro de criação dos dois clusters kind." style="width:182.857143%;left:0.000000%;top:-57.750760%"></div><figcaption>Registro de criação dos dois clusters kind. <a href="assets/evidencias/02-criacao-clusters.png">Abrir original integral</a></figcaption></figure><figure><h3>Figura 3 · Setup concluído e dez Jobs PASS</h3><div class="crop" style="aspect-ratio:1080/280"><img src="assets/evidencias/03-setup-e-testes.png" alt="Rodada 1791544005. A sequência exibida não contém intervenção corretiva entre setup e test." style="width:177.777778%;left:0.000000%;top:-166.428571%"></div><figcaption>Rodada 1791544005. A sequência exibida não contém intervenção corretiva entre setup e test. <a href="assets/evidencias/03-setup-e-testes.png">Abrir original integral</a></figcaption></figure><figure><h3>Figura 4 · Resultado final e limitações</h3><div class="crop" style="aspect-ratio:1370/589"><img src="assets/evidencias/04-resultado-completo.png" alt="16 critérios true; 85 linhas de auditoria; 09/10/2026 às 08:08:55 Brasília. Limites de NodePort e teste local mantidos." style="width:140.145985%;left:0.000000%;top:-68.081494%"></div><figcaption>16 critérios true; 85 linhas de auditoria; 09/10/2026 às 08:08:55 Brasília. Limites de NodePort e teste local mantidos. <a href="assets/evidencias/04-resultado-completo.png">Abrir original integral</a></figcaption></figure><p><a href="assets/evidence/public/2026-10-09-instalacao-limpa/RESULTADO_TRANSCRITO.json">JSON transcrito</a> · <a href="assets/evidence/public/2026-10-09-instalacao-limpa/MANIFESTO.json">Manifesto dos originais</a></p></section><section id="fontes" aria-label="Fontes originais"><h2>Fontes e rastreabilidade</h2>
+<p>As fontes R01–R19 do catálogo original estão listadas abaixo. Elas sustentam mecanismos e contexto; as escolhas concretas e resultados são próprios da POC. Consulta documental consolidada em 09/10/2026. URLs podem mudar; o commit da referência GovHub fixa a inspeção de código.</p>
+<h3>R01 — GOVHUB-BR</h3>
+<p><a href="https://github.com/GovHub-br/data-application-mgi">Data Application MGI: README e infraestrutura local</a></p>
+<p>Escopo: Commit 9f9d94761a8867bcdd392a4b10c70b56f2e8c8da; referência observada, não produção validada. Consulta: 2026-10-08.</p>
+<h3>R02 — OPENBAO</h3>
+<p><a href="https://openbao.org/docs/internals/security/">Security model</a></p>
+<p>Escopo: Modelo de ameaça e exclusões, incluindo cliente/host comprometidos. Consulta: 2026-10-08.</p>
+<h3>R03 — OPENBAO</h3>
+<p><a href="https://openbao.org/docs/auth/kubernetes/">Kubernetes auth method</a></p>
+<p>Escopo: Autenticação e alternativas de JWT/reviewer; consultar seção de tokens curtos. Consulta: 2026-10-08.</p>
+<h3>R04 — OPENBAO</h3>
+<p><a href="https://openbao.org/docs/configuration/listener/tcp/">tcp listener</a></p>
+<p>Escopo: Parâmetros de TLS e listener. Consulta: 2026-10-08.</p>
+<h3>R05 — KUBERNETES</h3>
+<p><a href="https://kubernetes.io/docs/concepts/security/rbac-good-practices/">Role Based Access Control Good Practices</a></p>
+<p>Escopo: Privilégio mínimo e caminhos indiretos de elevação. Consulta: 2026-10-08.</p>
+<h3>R06 — KUBERNETES</h3>
+<p><a href="https://kubernetes.io/docs/concepts/security/secrets-good-practices/">Good practices for Kubernetes Secrets</a></p>
+<p>Escopo: Acesso e tratamento de Secrets nativos. Consulta: 2026-10-08.</p>
+<h3>R07 — KUBERNETES</h3>
+<p><a href="https://kubernetes.io/docs/concepts/services-networking/network-policies/">Network Policies</a></p>
+<p>Escopo: Semântica e limites de enforcement e tradução de endereços. Consulta: 2026-10-08.</p>
+<h3>R08 — TIGERA / CALICO</h3>
+<p><a href="https://docs.tigera.io/calico/latest/getting-started/kubernetes/kind">Installing on Kind</a></p>
+<p>Escopo: CNI para o cenário Kind; a combinação fixada no código precisa de execução. Consulta: 2026-10-08.</p>
+<h3>R09 — GITLAB</h3>
+<p><a href="https://docs.gitlab.com/administration/secrets_manager/">GitLab Secrets Manager (OpenBao)</a></p>
+<p>Escopo: Integração documentada, operação e manutenção; não é arquitetura desta POC. Consulta: 2026-10-08.</p>
+<h3>R10 — SCHEEL, Alex</h3>
+<p><a href="https://openbao.org/blog/cipherboy-fosdem-25-talk/">OpenBao @ GitLab - FOSDEM 25, 12 fev. 2025</a></p>
+<p>Escopo: Relato técnico por participante do projeto; discussão de custo operacional e benefício. Consulta: 2026-10-08.</p>
+<h3>R11 — OPENBAO</h3>
+<p><a href="https://openbao.org/ecosystem/adopters/">Adopters</a></p>
+<p>Escopo: Organizações listadas publicamente; não fornece auditoria de cada implantação. Consulta: 2026-10-08.</p>
+<h3>R12 — FERMITOOLS / FERMILAB</h3>
+<p><a href="https://github.com/fermitools/htvault-config">htvault-config: README</a></p>
+<p>Escopo: Configuração pública do OpenBao, clientes, autenticação e renovação. Consulta: 2026-10-08.</p>
+<h3>R13 — DYKSTRA, Dave e colaboradores</h3>
+<p><a href="https://arxiv.org/abs/2503.24196">Fermilab’s Transition to Token Authentication, 2025</a></p>
+<p>Escopo: Relato técnico histórico em preprint; usa terminologia Vault, distinguida do README atual. Consulta: 2026-10-08.</p>
+<h3>R14 — CNCF</h3>
+<p><a href="https://www.cncf.io/case-studies/spotify/">Spotify: case study, 27 jun. 2019</a></p>
+<p>Escopo: Caso histórico com relatos de profissionais; não evidência atual de segurança ou uso de OpenBao. Consulta: 2026-10-08.</p>
+<h3>R15 — GITHUB</h3>
+<p><a href="https://docs.github.com/en/copilot/concepts/agents/code-review">About GitHub Copilot code review</a></p>
+<p>Escopo: Seção Validating Copilot code reviews: complementar verificação automática com humana. Consulta: 2026-10-08.</p>
+<h3>R16 — BRASIL</h3>
+<p><a href="https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm">Lei 13.709/2018, art. 5º</a></p>
+<p>Escopo: Definições legais de dados pessoais e pessoais sensíveis. Consulta: 2026-10-08.</p>
+<h3>R17 — ANPD</h3>
+<p><a href="https://www.gov.br/anpd/pt-br/acesso-a-informacao/perguntas-frequentes">Perguntas frequentes</a></p>
+<p>Escopo: Categorias e exemplos de dados pessoais. Consulta: 2026-10-08.</p>
+<h3>R18 — ANPD</h3>
+<p><a href="https://www.gov.br/anpd/pt-br/documentos-e-publicacoes/glossario-anpd">Glossário ANPD</a></p>
+<p>Escopo: Dados de autenticação em sistemas. Consulta: 2026-10-08.</p>
+<h3>R19 — KUBERNETES</h3>
+<p><a href="https://kubernetes.io/docs/concepts/security/application-security-checklist/">Application Security Checklist</a></p>
+<p>Escopo: Checklist original de aplicação: imagens, contexto de segurança e requisitos de execução. Consulta: 2026-10-08.</p>
+<h3>Fontes adicionais das revisões</h3>
+<ul>
+<li><a href="https://openbao.org/docs/configuration/audit/">Auditoria declarativa OpenBao</a>: configuração e recarga dos dispositivos.</li>
+<li><a href="https://openbao.org/community/release-notes/2-7-0/">Release notes OpenBao 2.7</a>: alterações incompatíveis e remoções.</li>
+<li><a href="https://gov-hub.io/govhub/quem-somos/">GovHub — Quem somos</a>: contexto do projeto; não comprova topologia de produção.</li>
+<li><a href="https://kubernetes.io/releases/version-skew-policy/">Política de version skew Kubernetes</a>: verificar a compatibilidade de clientes e componentes antes de reproduzir.</li>
+</ul>
+<h3>Como citar os resultados</h3>
+<p>Referenciar a transcrição, a declaração de proveniência e os prints em evidence/public. Informar que os resultados foram enviados pela autora e obtidos após correções manuais. Citar o commit da entrega depois da publicação; não inventar hash antes de existir.</p></section><section id="publicacao" aria-label="Publicação"><h2>Preparação para GitHub</h2>
+<p>Este diretório é a raiz do repositório a publicar. Repositório de destino confirmado: <code>yaraxavier/boas-praticas-comunicacao-clusters</code>. A ativação do GitHub Pages deve ser conferida separadamente. O responsável deve escolher o repositório, a visibilidade, a autoria e a licença adequada antes da publicação. Não adicionar licença de terceiros por inferência.</p>
+<ol>
+<li>Ler README, resultados e limitações; conferir os prints antes de torná-los públicos.</li>
+<li>Executar os testes locais e revisar <code>git status</code> e <code>git diff --cached</code>.</li>
+<li>Adicionar somente documentação, código, testes e evidências públicas revisadas. Nunca adicionar <code>.state</code> ou usar <code>git add -f</code> para contornar exclusões de credenciais.</li>
+<li>Registrar commit e versões na próxima execução real. Não alterar retrospectivamente a proveniência do resultado de 08/10/2026.</li>
+<li>Publicar no remoto escolhido após revisão do responsável. Se houver requisito de repositório institucional, confirmar suas regras de autoria/licenciamento.</li>
+</ol>
+<p>Exemplo de preparação local, somente se ainda não houver um repositório Git nesse diretório:</p>
+<pre><code>git init
+git add README.md AGENTS.md PUBLICACAO.md .gitignore docs scripts tests evidence/public
+git diff --cached --stat
+git diff --cached</code></pre>
+<p>O conteúdo pronto inclui documentação geral, arquitetura A/B, decisões, checklist, scripts, testes locais e evidências informadas. Não inclui terceiro cluster, credenciais reais, estado do laboratório ou afirmação de homologação institucional.</p>
+<h3>Configuração do Git</h3>
+<p>O pacote não contém <code>.git</code>, um remoto presumido ou identidade de commit. A configuração local deve ser feita na pasta extraída. Se o projeto já tiver um repositório, preservar seu histórico e revisar as diferenças antes de copiar arquivos. Não executar <code>git init</code> em outra pasta nem usar push forçado.</p>
+<p>Antes do commit:</p>
+<pre><code>python3 scripts/build_docs.py
+python3 -m unittest discover -s tests -v
+git status --short
+git diff --cached</code></pre>
+<p>Após revisão, criar o commit, escolher o remoto real e enviar a branch. O endereço do repositório é necessário para fornecer os comandos finais sem adivinhar conta ou projeto. Não publicar credenciais, backups ou logs brutos.</p>
+<h3>Publicar a documentação no GitHub Pages</h3>
+<p>A página foi preparada sem dependências externas de CSS, JavaScript ou bibliotecas de frontend. O gerador usa apenas a biblioteca padrão Python e produz o HTML completo. O arquivo <code>docs/.nojekyll</code> acompanha a página.</p>
+<p>No repositório escolhido, depois de enviar os arquivos:</p>
+<ol>
+<li>Abrir <strong>Settings → Pages</strong>.</li>
+<li>Em <strong>Build and deployment</strong>, selecionar <strong>Deploy from a branch</strong>.</li>
+<li>Escolher a branch usada (por exemplo <code>main</code>) e a pasta <strong>/docs</strong>.</li>
+<li>Salvar e aguardar o endereço informado pelo GitHub.</li>
+<li>Abrir a página publicada e conferir navegação, tabela de testes, figuras e links para os originais.</li>
+</ol>
+<p>A disponibilidade depende do plano e das regras da organização. Em publicação comum, o site pode ser público mesmo que o repositório seja privado; revisar os arquivos da pasta docs antes de ativar.</p>
+<p>Fonte: <a href="https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site">GitHub — configuração da origem de publicação</a>, consultada em 09/10/2026.</p></section><section id="agentes" aria-label="AGENTS.md"><h2>Regras para trabalhar nesta POC</h2>
+<p>Este arquivo é uma proposta própria; não é o AGENTS.md do GovHub.</p>
+<ol>
+<li>Preserve o foco: modelo documentado de boas práticas para comunicação entre clusters; OpenBao apoia a demonstração.</li>
+<li>Use apenas laboratório descartável e dados fictícios.</li>
+<li>Documente risco, prática, controle existente, gap, implementação, teste e evidência.</li>
+<li>Não trate um manifesto aplicado como evidência de bloqueio efetivo.</li>
+<li>Nunca registre JWT, root token, chave privada, unseal key ou valor de segredo nos logs.</li>
+<li>Valide CA e hostname; não use <code>curl -k</code>, TLS desabilitado ou modo dev.</li>
+<li>Diferencie controle demonstrado, resultado esperado e pendência.</li>
+<li>Não altere produção nem copie configurações do laboratório para produção sem revisão.</li>
+<li>Antes de modificar scripts, rode os testes do cliente e a compilação Python.</li>
+<li>Após mudança de rede ou identidade, repita a matriz de testes no laboratório.</li>
+<li>Mantenha commit e caminhos das referências verificáveis; não invente estado de produção.</li>
+<li>Mantenha os 28 itens do checklist, seus critérios, impactos e situações consistentes entre Markdown e JSON.</li>
+<li>Não use conclusão de segurança garantida nem presuma que segurança é sempre oposta à eficiência.</li>
+<li>Diferencie dados pessoais, pessoais sensíveis, credenciais e informação técnica; não classifique automaticamente CPF ou senha como pessoal sensível.</li>
+<li>Preserve um único titular humano geral, contas individuais e privilégios mínimos; documente risco de indisponibilidade e substituição controlada.</li>
+<li>Todo ataque/vazamento é simulado com dados fictícios em laboratório; registre alcance residual de um token válido comprometido.</li>
+<li>Exigir risco tratado e alternativa antes de adicionar ferramenta; menos componentes não autoriza omitir proteção necessária.</li>
+<li>IA, scanner e PASS não substituem revisão humana das premissas e evidências.</li>
+<li>Registrar efeitos positivos, negativos, alternativas e condição de revisão de cada decisão, com documentação original.</li>
+<li>Não converter relato público de uso em prova de segurança nem presumir que uma fonte exige escolhas próprias da POC.</li>
+</ol>
+<h3>Escopo e organização desta entrega</h3>
+<ul>
+<li>Trabalhar somente com A (<code>sbd-app</code>) e B (<code>sbd-bao</code>). Não criar terceiro cluster sem nova solicitação.</li>
+<li>Manter teoria em <code>docs/modelo/</code> e implementação/resultados em <code>docs/poc/</code>.</li>
+<li>Não tratar o <code>AGENTS.md</code> como mecanismo de segurança: é instrução de trabalho, sujeita à revisão humana.</li>
+<li>Este arquivo é próprio da POC; não foi copiado de um AGENTS.md do GovHub.</li>
+<li>Preservar a distinção entre execução informada pela autora, testes locais simulados e teste ainda pendente.</li>
+<li>Não substituir o resultado histórico por uma nova execução: guardar data, versão e proveniência.</li>
+<li>Nunca executar <code>cleanup</code> antes de preservar evidências; não modificar clusters alheios.</li>
+<li>Não publicar <code>.state</code>, kubeconfig, chaves, bootstrap, tokens, logs brutos nem backups do código.</li>
+<li>Revisar o diff e o conteúdo de cada arquivo público; <code>.gitignore</code> não substitui revisão.</li>
+<li>Após editar código, executar <code>python3 -m unittest discover -s tests -v</code> e <code>python3 -m compileall -q scripts tests</code>.</li>
+<li>Testes locais não substituem <code>python3 scripts/lab.py test</code> no laboratório real.</li>
+<li>Fontes e datas devem ser verificáveis. Não inventar versões compatíveis, ganhos de desempenho ou adoção institucional.</li>
+<li>Não publicar no GitHub, escolher licença ou atribuir autoria institucional sem decisão do responsável.</li>
+</ul></section></main></body></html>

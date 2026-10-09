@@ -1,0 +1,209 @@
+[
+  {
+    "id": "D01",
+    "title": "Dois clusters independentes",
+    "why": "Tornar explícita a fronteira entre consumidor e autoridade de segredos e manter o recorte entre clusters.",
+    "positive": "Permite examinar endpoints e identidades de autoridades distintas.",
+    "negative": "Mais consumo e complexidade de rota; não produz conectividade geral entre Pods.",
+    "alternative": "Um cluster com namespaces seria mais simples, mas não representaria a fronteira pretendida.",
+    "verification": "Conferir APIs distintas e os fluxos F01/F02.",
+    "reconsider_when": "Reavaliar topologia se o ambiente real tiver outra separação de autoridades.",
+    "source_refs": [
+      "R01",
+      "R03"
+    ],
+    "status": "Escopo técnico executado conforme resultado informado pela autora; avaliar aplicabilidade da decisão em evidence/VALIDACAO_AUTORA.md"
+  },
+  {
+    "id": "D02",
+    "title": "Kind para reprodução local",
+    "why": "Facilitar um laboratório descartável que a autora possa testar em Linux.",
+    "positive": "Criação e limpeza delimitadas; não exige contratar infraestrutura.",
+    "negative": "Rede Docker e kubeconfig local diferem da operação institucional.",
+    "alternative": "Clusters gerenciados ou VMs seriam mais representativos, com mais requisitos de acesso e recursos.",
+    "verification": "Criar os clusters, confirmar versões e contextos; rejeitar nomes preexistentes.",
+    "reconsider_when": "Se o objetivo passar a disponibilidade ou desempenho institucional, substituir o cenário local.",
+    "source_refs": [
+      "R08"
+    ],
+    "status": "Escopo técnico executado conforme resultado informado pela autora; avaliar aplicabilidade da decisão em evidence/VALIDACAO_AUTORA.md"
+  },
+  {
+    "id": "D03",
+    "title": "Calico como CNI do ensaio",
+    "why": "A política de rede precisa de um mecanismo que a aplique, não apenas de YAML aceito pela API.",
+    "positive": "Oferece um caminho de enforcement para os testes propostos.",
+    "negative": "Adiciona componentes, permissões e manutenção; NAT pode afetar a interpretação.",
+    "alternative": "Usar a CNI já aprovada no ambiente real pode evitar um componente novo; comprovar seu suporte.",
+    "verification": "Testar acesso permitido/bloqueado e investigar origem efetiva.",
+    "reconsider_when": "Não instalar Calico sobre CNI institucional somente por ser a escolha do laboratório.",
+    "source_refs": [
+      "R07",
+      "R08"
+    ],
+    "status": "Escopo técnico executado conforme resultado informado pela autora; avaliar aplicabilidade da decisão em evidence/VALIDACAO_AUTORA.md"
+  },
+  {
+    "id": "D04",
+    "title": "OpenBao para o fluxo de segredos",
+    "why": "Demonstrar autenticação e autorização de consumidor que acessa configuração mantida em outro cluster.",
+    "positive": "Centraliza o ponto de política e permite testar validade e revogação.",
+    "negative": "Torna-se dependência operacional; falha do servidor ou cliente autorizado comprometido ainda importa.",
+    "alternative": "Secrets nativos ou gerenciador já adotado podem bastar em outros contextos; comparar requisitos antes de acrescentar serviço.",
+    "verification": "Login, leitura restrita, negação administrativa e resposta à revogação.",
+    "reconsider_when": "Remover ou substituir se não houver requisito que justifique operação e manutenção adicionais.",
+    "source_refs": [
+      "R02",
+      "R06",
+      "R10"
+    ],
+    "status": "Escopo técnico executado conforme resultado informado pela autora; avaliar aplicabilidade da decisão em evidence/VALIDACAO_AUTORA.md"
+  },
+  {
+    "id": "D05",
+    "title": "TLS de servidor e identidade por token",
+    "why": "Proteger o transporte e verificar o destino, mantendo separado o teste da identidade da aplicação.",
+    "positive": "Cliente rejeita CA não confiável e usa identidade específica.",
+    "negative": "Certificados expiram; mTLS de cliente não está demonstrado nesta versão.",
+    "alternative": "mTLS pode ser necessário em outro modelo de confiança, com mais gestão de certificados.",
+    "verification": "CA inválida rejeitada; SAN e destino compatíveis; login correto.",
+    "reconsider_when": "Reavaliar se o serviço exigir certificado cliente ou política de confiança diferente.",
+    "source_refs": [
+      "R04"
+    ],
+    "status": "Escopo técnico executado conforme resultado informado pela autora; avaliar aplicabilidade da decisão em evidence/VALIDACAO_AUTORA.md"
+  },
+  {
+    "id": "D06",
+    "title": "Kubernetes Auth e reviewer dedicado",
+    "why": "Avaliar o vínculo entre identidade do cluster A e autorização no OpenBao B.",
+    "positive": "Validação usa a API da autoridade prevista com permissões delimitadas.",
+    "negative": "Disponibilidade e renovação do reviewer influenciam o login.",
+    "alternative": "JWT/OIDC é alternativa documentada, cuja validade e revogação precisam de análise própria.",
+    "verification": "ServiceAccount/audience errados negados; reviewer cria somente TokenReview.",
+    "reconsider_when": "Reconsiderar se o endpoint da API não puder ser alcançado com segurança.",
+    "source_refs": [
+      "R03",
+      "R05"
+    ],
+    "status": "Escopo técnico executado conforme resultado informado pela autora; avaliar aplicabilidade da decisão em evidence/VALIDACAO_AUTORA.md"
+  },
+  {
+    "id": "D07",
+    "title": "TTL de laboratório e política de leitura estreita",
+    "why": "Limitar alcance e tornar revogação/expiração observáveis em um ensaio curto.",
+    "positive": "A credencial não autoriza outros caminhos nem escrita.",
+    "negative": "Token válido copiado ainda permite seu próprio acesso; renovação frequente tem custo.",
+    "alternative": "Prazo maior reduz autenticações, mas aumenta janela de uso; definir conforme risco e operação reais.",
+    "verification": "TTL 300 s no ensaio normal e 30 s na role de expiração; testar ambas.",
+    "reconsider_when": "Esses valores são parâmetros da POC, não recomendação universal das fontes.",
+    "source_refs": [
+      "R02",
+      "R03"
+    ],
+    "status": "Escopo técnico executado conforme resultado informado pela autora; avaliar aplicabilidade da decisão em evidence/VALIDACAO_AUTORA.md"
+  },
+  {
+    "id": "D08",
+    "title": "Um titular humano de administração geral",
+    "why": "Atender à regra de governança proposta pela autora e reduzir dispersão do poder global.",
+    "positive": "Facilita inventário de concessões e responsabilização.",
+    "negative": "Cria concentração de poder e risco de indisponibilidade; compromisso dessa identidade tem grande impacto.",
+    "alternative": "Outra organização pode precisar de modelo de concessão temporária e custódia diferente; não transplantar a regra sem revisão.",
+    "verification": "Inventariar concessões equivalentes, substituição e uso cotidiano de contas limitadas.",
+    "reconsider_when": "A documentação Kubernetes sustenta privilégio mínimo, não exige exatamente um administrador. Unseal/custódia de chaves é decisão distinta.",
+    "source_refs": [
+      "R05",
+      "R02"
+    ],
+    "status": "Escopo técnico executado conforme resultado informado pela autora; avaliar aplicabilidade da decisão em evidence/VALIDACAO_AUTORA.md"
+  },
+  {
+    "id": "D09",
+    "title": "Armazenamento temporário e bootstrap simplificado",
+    "why": "Reduzir montagem do laboratório para observar o fluxo sem construir uma plataforma de produção.",
+    "positive": "Instalação pequena, baixo esforço inicial e descarte fácil.",
+    "negative": "Recriar o Pod perde armazenamento; chave única de unseal e root retido são simplificações com risco.",
+    "alternative": "Persistência, backup e custódia de chaves são necessários quando a criticidade exigir.",
+    "verification": "Registrar limites e não declarar BP17 atendido por essa escolha.",
+    "reconsider_when": "Nunca usar essa decisão como desenho de produção ou prova de recuperação.",
+    "source_refs": [
+      "R02",
+      "R09"
+    ],
+    "status": "Escopo técnico executado conforme resultado informado pela autora; avaliar aplicabilidade da decisão em evidence/VALIDACAO_AUTORA.md"
+  },
+  {
+    "id": "D10",
+    "title": "Probes diretos, sem Agent/CSI nesta versão",
+    "why": "Manter transparente o ensaio de API, token e autorização antes de adicionar mecanismo de entrega.",
+    "positive": "Menos componentes para diagnosticar o comportamento básico.",
+    "negative": "Não cobre renovação automática, lifecycle nem integração real do pipeline.",
+    "alternative": "Agent/CSI ou backend de secrets do consumidor podem resolver requisitos reais, após justificar privilégios e dependências.",
+    "verification": "Testar o cliente e revisar ausência de valores privados nos logs.",
+    "reconsider_when": "Reavaliar quando a aplicação tiver requisito de entrega/renovação contínua.",
+    "source_refs": [
+      "R03",
+      "R02"
+    ],
+    "status": "Escopo técnico executado conforme resultado informado pela autora; avaliar aplicabilidade da decisão em evidence/VALIDACAO_AUTORA.md"
+  },
+  {
+    "id": "D11",
+    "title": "Log por campos operacionais controlados",
+    "why": "Demonstrar uma exposição simples por excesso de conteúdo e uma saída reduzida.",
+    "positive": "Evita os marcadores restritos no caso testado.",
+    "negative": "Pode retirar informação útil e não detecta todos os vazamentos ou campos novos.",
+    "alternative": "Redação automática pode complementar, mas exige tratamento de falhas e teste de conteúdo.",
+    "verification": "Executar leak_demo e revisar o que se perde ou permanece no log.",
+    "reconsider_when": "Testar novos eventos antes de liberar campos; não confundir o exemplo com scanner universal.",
+    "source_refs": [
+      "R06"
+    ],
+    "status": "Escopo técnico executado conforme resultado informado pela autora; avaliar aplicabilidade da decisão em evidence/VALIDACAO_AUTORA.md"
+  },
+  {
+    "id": "D12",
+    "title": "Suíte automatizada com revisão humana",
+    "why": "Repetir verificações observáveis sem terceirizar a conclusão de segurança.",
+    "positive": "Consistência e rastreabilidade do procedimento.",
+    "negative": "PASS pode refletir um teste errado ou causa equivocada; simulação não valida cluster real.",
+    "alternative": "Revisão manual sem automação reduz infraestrutura de teste, mas dificulta repetição; combinar conforme escopo.",
+    "verification": "Revisar premissa, negativo, resultado e causa antes de marcar Conforme.",
+    "reconsider_when": "Mudar a suíte quando o risco mudar; não aprovar somente porque ferramenta ou IA afirmou.",
+    "source_refs": [
+      "R15",
+      "R07"
+    ],
+    "status": "Escopo técnico executado conforme resultado informado pela autora; avaliar aplicabilidade da decisão em evidence/VALIDACAO_AUTORA.md"
+  },
+  {
+    "id": "D13",
+    "title": "Não adicionar scanners, service mesh e plataformas sem requisito",
+    "why": "Evitar aumentar a superfície e o custo sem identificar qual lacuna o componente trata.",
+    "positive": "Menos interfaces, integrações, permissões e dependências para manter.",
+    "negative": "Adiar uma ferramenta necessária também mantém gaps; simplificar não é omitir controle obrigatório.",
+    "alternative": "Adicionar componente somente com risco, responsável, teste e comparação com capacidade existente.",
+    "verification": "Revisar BP26 e decisão da inclusão/adiamento com evidência.",
+    "reconsider_when": "Se surgir gap demonstrado, reconsiderar; menos componentes não significa menos proteção necessária.",
+    "source_refs": [
+      "R10"
+    ],
+    "status": "Escopo técnico executado conforme resultado informado pela autora; avaliar aplicabilidade da decisão em evidence/VALIDACAO_AUTORA.md"
+  },
+  {
+    "id": "D14",
+    "title": "Atualização controlada, sem troca cega de versões",
+    "why": "Conservar compatibilidade e proteção durante a evolução do modelo.",
+    "positive": "Mudança fica associada a motivo, testes e retorno.",
+    "negative": "Exige tempo e pode manter risco enquanto correção não é aplicada.",
+    "alternative": "Atualização automática exige pipeline capaz de detectar regressões e recuperar falhas.",
+    "verification": "Aplicar BP25 e repetir verificações afetadas.",
+    "reconsider_when": "Priorização conforme exposição; os números fixados no script precisam de revisão.",
+    "source_refs": [
+      "R09",
+      "R12"
+    ],
+    "status": "Escopo técnico executado conforme resultado informado pela autora; avaliar aplicabilidade da decisão em evidence/VALIDACAO_AUTORA.md"
+  }
+]

@@ -1,0 +1,27 @@
+{
+  "provenance": "Transcrição do conteúdo fornecido pela autora na conversa; não é o arquivo original coletado independentemente.",
+  "executed_at": "2026-10-08T22:00:15Z",
+  "results": {
+    "baseline_connection": true,
+    "baseline_unrestricted": true,
+    "authorized": true,
+    "wrong-sa": true,
+    "wrong-audience": true,
+    "expired": true,
+    "leaked-token": true,
+    "attack-chain": true,
+    "tls-ca": true,
+    "network-denied": true,
+    "rbac-reader-get-secrets": true,
+    "rbac-reviewer-create-tokenreviews.authentication.k8s.io": true,
+    "rbac-reviewer-get-secrets": true,
+    "rbac-reader-create-pods": true,
+    "rbac-reader-create-clusterrolebindings.rbac.authorization.k8s.io": true,
+    "audit_present": true
+  },
+  "audit_lines": 91,
+  "limitations": [
+    "NodePort pode mascarar origem; validar SNAT/CNI.",
+    "Bloqueio demonstrado com Pod local no cluster B; não prova isolamento entre workloads externos."
+  ]
+}

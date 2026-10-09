@@ -1,0 +1,154 @@
+[
+  {
+    "id": "R01",
+    "author": "GOVHUB-BR",
+    "title": "Data Application MGI: README e infraestrutura local",
+    "url": "https://github.com/GovHub-br/data-application-mgi",
+    "scope": "Commit 9f9d94761a8867bcdd392a4b10c70b56f2e8c8da; referência observada, não produção validada.",
+    "consulted_at": "2026-10-08"
+  },
+  {
+    "id": "R02",
+    "author": "OPENBAO",
+    "title": "Security model",
+    "url": "https://openbao.org/docs/internals/security/",
+    "scope": "Modelo de ameaça e exclusões, incluindo cliente/host comprometidos.",
+    "consulted_at": "2026-10-08"
+  },
+  {
+    "id": "R03",
+    "author": "OPENBAO",
+    "title": "Kubernetes auth method",
+    "url": "https://openbao.org/docs/auth/kubernetes/",
+    "scope": "Autenticação e alternativas de JWT/reviewer; consultar seção de tokens curtos.",
+    "consulted_at": "2026-10-08"
+  },
+  {
+    "id": "R04",
+    "author": "OPENBAO",
+    "title": "tcp listener",
+    "url": "https://openbao.org/docs/configuration/listener/tcp/",
+    "scope": "Parâmetros de TLS e listener.",
+    "consulted_at": "2026-10-08"
+  },
+  {
+    "id": "R05",
+    "author": "KUBERNETES",
+    "title": "Role Based Access Control Good Practices",
+    "url": "https://kubernetes.io/docs/concepts/security/rbac-good-practices/",
+    "scope": "Privilégio mínimo e caminhos indiretos de elevação.",
+    "consulted_at": "2026-10-08"
+  },
+  {
+    "id": "R06",
+    "author": "KUBERNETES",
+    "title": "Good practices for Kubernetes Secrets",
+    "url": "https://kubernetes.io/docs/concepts/security/secrets-good-practices/",
+    "scope": "Acesso e tratamento de Secrets nativos.",
+    "consulted_at": "2026-10-08"
+  },
+  {
+    "id": "R07",
+    "author": "KUBERNETES",
+    "title": "Network Policies",
+    "url": "https://kubernetes.io/docs/concepts/services-networking/network-policies/",
+    "scope": "Semântica e limites de enforcement e tradução de endereços.",
+    "consulted_at": "2026-10-08"
+  },
+  {
+    "id": "R08",
+    "author": "TIGERA / CALICO",
+    "title": "Installing on Kind",
+    "url": "https://docs.tigera.io/calico/latest/getting-started/kubernetes/kind",
+    "scope": "CNI para o cenário Kind; a combinação fixada no código precisa de execução.",
+    "consulted_at": "2026-10-08"
+  },
+  {
+    "id": "R09",
+    "author": "GITLAB",
+    "title": "GitLab Secrets Manager (OpenBao)",
+    "url": "https://docs.gitlab.com/administration/secrets_manager/",
+    "scope": "Integração documentada, operação e manutenção; não é arquitetura desta POC.",
+    "consulted_at": "2026-10-08"
+  },
+  {
+    "id": "R10",
+    "author": "SCHEEL, Alex",
+    "title": "OpenBao @ GitLab - FOSDEM 25, 12 fev. 2025",
+    "url": "https://openbao.org/blog/cipherboy-fosdem-25-talk/",
+    "scope": "Relato técnico por participante do projeto; discussão de custo operacional e benefício.",
+    "consulted_at": "2026-10-08"
+  },
+  {
+    "id": "R11",
+    "author": "OPENBAO",
+    "title": "Adopters",
+    "url": "https://openbao.org/ecosystem/adopters/",
+    "scope": "Organizações listadas publicamente; não fornece auditoria de cada implantação.",
+    "consulted_at": "2026-10-08"
+  },
+  {
+    "id": "R12",
+    "author": "FERMITOOLS / FERMILAB",
+    "title": "htvault-config: README",
+    "url": "https://github.com/fermitools/htvault-config",
+    "scope": "Configuração pública do OpenBao, clientes, autenticação e renovação.",
+    "consulted_at": "2026-10-08"
+  },
+  {
+    "id": "R13",
+    "author": "DYKSTRA, Dave e colaboradores",
+    "title": "Fermilab’s Transition to Token Authentication, 2025",
+    "url": "https://arxiv.org/abs/2503.24196",
+    "scope": "Relato técnico histórico em preprint; usa terminologia Vault, distinguida do README atual.",
+    "consulted_at": "2026-10-08"
+  },
+  {
+    "id": "R14",
+    "author": "CNCF",
+    "title": "Spotify: case study, 27 jun. 2019",
+    "url": "https://www.cncf.io/case-studies/spotify/",
+    "scope": "Caso histórico com relatos de profissionais; não evidência atual de segurança ou uso de OpenBao.",
+    "consulted_at": "2026-10-08"
+  },
+  {
+    "id": "R15",
+    "author": "GITHUB",
+    "title": "About GitHub Copilot code review",
+    "url": "https://docs.github.com/en/copilot/concepts/agents/code-review",
+    "scope": "Seção Validating Copilot code reviews: complementar verificação automática com humana.",
+    "consulted_at": "2026-10-08"
+  },
+  {
+    "id": "R16",
+    "author": "BRASIL",
+    "title": "Lei 13.709/2018, art. 5º",
+    "url": "https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm",
+    "scope": "Definições legais de dados pessoais e pessoais sensíveis.",
+    "consulted_at": "2026-10-08"
+  },
+  {
+    "id": "R17",
+    "author": "ANPD",
+    "title": "Perguntas frequentes",
+    "url": "https://www.gov.br/anpd/pt-br/acesso-a-informacao/perguntas-frequentes",
+    "scope": "Categorias e exemplos de dados pessoais.",
+    "consulted_at": "2026-10-08"
+  },
+  {
+    "id": "R18",
+    "author": "ANPD",
+    "title": "Glossário ANPD",
+    "url": "https://www.gov.br/anpd/pt-br/documentos-e-publicacoes/glossario-anpd",
+    "scope": "Dados de autenticação em sistemas.",
+    "consulted_at": "2026-10-08"
+  },
+  {
+    "id": "R19",
+    "author": "KUBERNETES",
+    "title": "Application Security Checklist",
+    "url": "https://kubernetes.io/docs/concepts/security/application-security-checklist/",
+    "scope": "Checklist original de aplicação: imagens, contexto de segurança e requisitos de execução.",
+    "consulted_at": "2026-10-08"
+  }
+]

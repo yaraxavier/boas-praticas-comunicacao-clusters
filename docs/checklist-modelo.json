@@ -1,0 +1,532 @@
+[
+  {
+    "id": "BP01",
+    "priority": "P0",
+    "title": "Inventariar os fluxos entre clusters",
+    "risk": "Comunicação necessária não identificada ou exposição de interfaces sem finalidade.",
+    "practice": "Registrar origem, destino, porta, protocolo, aplicação, identidade, ativo e justificativa de cada fluxo.",
+    "verify": "Comparar inventário com manifests, Services, endpoints e tráfego observado no ambiente.",
+    "evidence": "Inventário datado, desenho dos fluxos e configuração correspondente, sem credenciais.",
+    "acceptance": "Cada fluxo permitido possui finalidade e responsável; fluxos desconhecidos permanecem pendentes até investigação.",
+    "impact": "Esforço inicial de levantamento e manutenção quando a arquitetura muda.",
+    "lab_status": "Documentado para o laboratório; confirmação por observação de tráfego ainda pendente.",
+    "decision_refs": [
+      "D01"
+    ],
+    "source_refs": [
+      "R01"
+    ]
+  },
+  {
+    "id": "BP02",
+    "priority": "P0",
+    "title": "Delimitar fronteiras e autoridades de identidade",
+    "risk": "Confundir clusters diferentes ou atribuir a mesma autoridade a contas homônimas.",
+    "practice": "Identificar API, CA, namespaces, contas e mount de autenticação por cluster consumidor.",
+    "verify": "Conferir o endpoint configurado e autenticar uma identidade de cada autoridade efetivamente utilizada.",
+    "evidence": "Mapa de confiança e configuração de mounts, endpoints e CAs.",
+    "acceptance": "Toda identidade é vinculada à autoridade prevista; novo consumidor não é incluído sem configuração e teste específicos.",
+    "impact": "Configuração adicional por cluster e maior responsabilidade sobre rotação de confiança.",
+    "lab_status": "Dois clusters criados na instalação limpa de 09/10/2026; A é consumidor com mount próprio. Sem terceiro cluster.",
+    "decision_refs": [
+      "D01",
+      "D06"
+    ],
+    "source_refs": [
+      "R03"
+    ]
+  },
+  {
+    "id": "BP03",
+    "priority": "P0",
+    "title": "Verificar TLS em todos os fluxos sensíveis",
+    "risk": "Intercepção de JWT, segredo ou credencial e conexão com servidor indevido.",
+    "practice": "Usar HTTPS com CA confiável e hostname/IP compatível com SAN, sem desabilitar validação; aplicar TLS também ao TokenReview.",
+    "verify": "Teste positivo com certificado válido e negativo com CA não confiável; revisar destino, SAN e validade.",
+    "evidence": "Resultados de handshake e rejeição específica de certificado, sem chave privada.",
+    "acceptance": "Fluxo válido funciona e certificado não confiável é rejeitado por causa TLS identificada; conexão em claro não é aceita como alternativa.",
+    "impact": "Handshake, gestão de certificados e custo de renovação; medir impacto em vez de presumir.",
+    "lab_status": "Comunicação autorizada e rejeição de CA não confiável aprovadas na rodada real de 09/10/2026. Inspeção independente de todos os fluxos TLS permanece pendente.",
+    "decision_refs": [
+      "D05"
+    ],
+    "source_refs": [
+      "R04"
+    ]
+  },
+  {
+    "id": "BP04",
+    "priority": "P0",
+    "title": "Controlar o ciclo de vida de certificados",
+    "risk": "Expiração interrompe o serviço ou confiança antiga permanece ativa.",
+    "practice": "Definir emissor, validade, proprietário, renovação, distribuição de CA e procedimento de substituição.",
+    "verify": "Simular renovação e verificar acesso após troca; examinar alerta de vencimento.",
+    "evidence": "Procedimento e registro de teste de renovação, com datas e responsáveis.",
+    "acceptance": "Renovação e recuperação de falha documentadas e verificadas dentro do prazo operacional definido.",
+    "impact": "Manutenção recorrente e possível janela de atualização.",
+    "lab_status": "Certificados de laboratório de sete dias; renovação automática não implementada.",
+    "decision_refs": [
+      "D05",
+      "D14"
+    ],
+    "source_refs": [
+      "R04",
+      "R12"
+    ]
+  },
+  {
+    "id": "BP05",
+    "priority": "P0",
+    "title": "Usar identidade específica por consumidor",
+    "risk": "Credenciais compartilhadas ampliam alcance e dificultam rastreamento.",
+    "practice": "Separar ServiceAccounts por aplicação e autorizar nome e namespace específicos no OpenBao.",
+    "verify": "Executar login da conta permitida e da conta outsider.",
+    "evidence": "Configuração da role e logs de login permitido/rejeitado.",
+    "acceptance": "Conta legítima aceita; conta fora do vínculo rejeitada; exceções têm justificativa e prazo.",
+    "impact": "Mais contas e políticas para manter; melhora atribuição de acesso.",
+    "lab_status": "wrong-sa aprovado na rodada real de 09/10/2026; a identidade outsider foi recusada conforme o teste.",
+    "decision_refs": [
+      "D06",
+      "D07"
+    ],
+    "source_refs": [
+      "R03",
+      "R05"
+    ]
+  },
+  {
+    "id": "BP06",
+    "priority": "P0",
+    "title": "Restringir audience e prazo do JWT",
+    "risk": "Token emitido para outra finalidade é reaproveitado indevidamente.",
+    "practice": "Projetar token com audience específica e expiração; desligar montagem automática onde não necessária.",
+    "verify": "Tentar login com audience válida e incorreta; revisar volume projetado e validade emitida.",
+    "evidence": "Manifest do consumidor e resultados dos testes, sem JWT.",
+    "acceptance": "Audience indevida é rejeitada e tokens não são mantidos como Secrets permanentes por conveniência.",
+    "impact": "Renovação e compatibilidade das aplicações precisam ser verificadas.",
+    "lab_status": "wrong-audience aprovado na rodada real de 09/10/2026; JWT projetado solicita 600 s. Expiração do JWT Kubernetes não foi testada separadamente da expiração do token OpenBao.",
+    "decision_refs": [
+      "D06"
+    ],
+    "source_refs": [
+      "R03"
+    ]
+  },
+  {
+    "id": "BP07",
+    "priority": "P0",
+    "title": "Limitar o reviewer de autenticação",
+    "risk": "Validador ganha poder além do necessário ou sua expiração interrompe autenticação.",
+    "practice": "Conta reviewer dedicada com create em tokenreviews; CA e API corretas; estratégia explícita de renovação.",
+    "verify": "Verificar can-i para TokenReview e Secrets; testar login após renovação e após falha controlada.",
+    "evidence": "Regras RBAC, can-i e procedimento de rotação do reviewer.",
+    "acceptance": "Reviewer pode validar tokens e não ler Secrets; ciclo de renovação é conhecido e testado.",
+    "impact": "Complexidade operacional e dependência da API remota.",
+    "lab_status": "Verificações RBAC do reviewer aprovadas na rodada real de 09/10/2026; renovação feita ao executar test. Automação contínua não implementada.",
+    "decision_refs": [
+      "D06"
+    ],
+    "source_refs": [
+      "R03",
+      "R05"
+    ]
+  },
+  {
+    "id": "BP08",
+    "priority": "P0",
+    "title": "Aplicar autorização mínima por caminho",
+    "risk": "Aplicação lê segredos de outras aplicações ou altera configurações.",
+    "practice": "Política por recurso e ação: permitir apenas caminhos e capacidades necessários.",
+    "verify": "Ler caminho próprio, ler caminho de outro consumidor e tentar escrita.",
+    "evidence": "Policy e logs allowed_read, foreign_path_denied e write_denied.",
+    "acceptance": "Acesso necessário funciona; leitura estrangeira e escrita desnecessária são negadas.",
+    "impact": "Políticas mais detalhadas e revisão quando a aplicação muda.",
+    "lab_status": "authorized, leaked-token e attack-chain aprovados na rodada real de 09/10/2026; leitura do próprio escopo permitida e expansão de permissões recusada nos casos testados.",
+    "decision_refs": [
+      "D07"
+    ],
+    "source_refs": [
+      "R02"
+    ]
+  },
+  {
+    "id": "BP09",
+    "priority": "P0",
+    "title": "Restringir fluxos de entrada e saída",
+    "risk": "Pod comprometido usa caminhos de rede que não são necessários.",
+    "practice": "Aplicar políticas explícitas de origem, destino e porta e comprovar suporte de enforcement da CNI.",
+    "verify": "Comparar baseline e pós-controle com serviço saudável; tentar acesso de origem não permitida.",
+    "evidence": "Políticas aplicadas, sucesso legítimo, bloqueio e, quando disponível, registros do CNI.",
+    "acceptance": "Fluxos necessários continuam operacionais e tentativas fora do escopo são bloqueadas com causa identificável.",
+    "impact": "Regras podem quebrar dependências legítimas; exige levantamento e diagnóstico.",
+    "lab_status": "network-denied aprovado em 08/10 e na instalação limpa de 09/10/2026; bloqueio demonstrado localmente em B, sem comprovação de isolamento de workloads externos.",
+    "decision_refs": [
+      "D03"
+    ],
+    "source_refs": [
+      "R07",
+      "R08"
+    ]
+  },
+  {
+    "id": "BP10",
+    "priority": "P0",
+    "title": "Validar o efeito de NAT e da exposição externa",
+    "risk": "Regras baseadas em IP passam a representar o nó ou gateway, não a aplicação.",
+    "practice": "Mapear NodePort, LoadBalancer, NAT e firewall; definir onde cada controle enxerga a origem efetiva.",
+    "verify": "Examinar IP/porta antes e depois da tradução e testar dois consumidores remotos com permissões distintas.",
+    "evidence": "Diagrama de encaminhamento, registros de origem e testes entre consumidores.",
+    "acceptance": "Não se atribui isolamento por identidade remota a uma regra que apenas permite o IP compartilhado de nó/gateway.",
+    "impact": "Pode exigir firewall, gateway ou mudança de topologia; custo depende do ambiente.",
+    "lab_status": "Limite documentado; isolamento por identidade remota não demonstrado nesta versão.",
+    "decision_refs": [
+      "D01",
+      "D03"
+    ],
+    "source_refs": [
+      "R07"
+    ]
+  },
+  {
+    "id": "BP11",
+    "priority": "P0",
+    "title": "Controlar duração, revogação e renovação do token OpenBao",
+    "risk": "Token continua utilizável além da necessidade ou aplicação perde acesso por renovação mal definida.",
+    "practice": "Definir TTL e máximo, testar expiração e revogação e documentar política de renovação do consumidor.",
+    "verify": "Ler com token válido, revogar e repetir; emitir token curto, aguardar expiração e repetir.",
+    "evidence": "Resultados de revogação e expiração, sem valor de token.",
+    "acceptance": "Token inválido é negado; estratégia de continuidade para aplicação real é definida antes da adoção.",
+    "impact": "Autenticações adicionais e necessidade de tratar falhas sem laço infinito.",
+    "lab_status": "Revogação e expiração do token OpenBao aprovadas na rodada real de 09/10/2026; TTL normal de 300 s e role experimental de 30 s. Renovação contínua não implementada.",
+    "decision_refs": [
+      "D07"
+    ],
+    "source_refs": [
+      "R02",
+      "R03"
+    ]
+  },
+  {
+    "id": "BP12",
+    "priority": "P0",
+    "title": "Manter credenciais administrativas fora dos workloads",
+    "risk": "Root token, unseal key ou chave privada vazam para aplicação, Git ou relatório.",
+    "practice": "Separar bootstrap de operação; aplicar acesso mínimo; não entregar root ao consumidor e não registrar segredos em logs.",
+    "verify": "Revisar manifests, arquivos e evidências; verificar quem acessa bootstrap e seu descarte.",
+    "evidence": "Registro da revisão, permissões e processo de descarte, sem conteúdo sensível.",
+    "acceptance": "Aplicação recebe somente sua identidade e token; material administrativo tem proprietário, finalidade e retenção definidos.",
+    "impact": "Mais disciplina de operação e controle de acesso.",
+    "lab_status": ".state é local, restrito e excluído do pacote; root retido apenas para laboratório, não adequado à operação real.",
+    "decision_refs": [
+      "D08",
+      "D09"
+    ],
+    "source_refs": [
+      "R02",
+      "R06"
+    ]
+  },
+  {
+    "id": "BP13",
+    "priority": "P1",
+    "title": "Delimitar a entrega de segredos à aplicação",
+    "risk": "Segredo é persistido, exposto ou copiado sem necessidade após leitura.",
+    "practice": "Escolher mecanismo de entrega compatível com o consumidor e controlar arquivo, memória, permissões e retenção.",
+    "verify": "Inspecionar consumo, saídas e armazenamento; verificar ausência de valor sensível em logs e artefatos.",
+    "evidence": "Descrição do mecanismo e resultado de revisão de saídas.",
+    "acceptance": "Mecanismo tem justificativa e destino controlado; valores não aparecem nas evidências publicadas.",
+    "impact": "Agent/CSI ou backend específico podem introduzir componentes e manutenção adicionais.",
+    "lab_status": "Cliente Python lê dado fictício sem imprimi-lo; Agent/CSI e Airflow não integrados.",
+    "decision_refs": [
+      "D10"
+    ],
+    "source_refs": [
+      "R02",
+      "R06"
+    ]
+  },
+  {
+    "id": "BP14",
+    "priority": "P1",
+    "title": "Registrar e revisar auditoria",
+    "risk": "Acesso indevido não deixa evidência útil ou logs acabam expondo metadados sensíveis.",
+    "practice": "Habilitar auditoria, restringir acesso, definir retenção e correlação de solicitações com teste/identidade.",
+    "verify": "Gerar leitura permitida e negação; conferir que ambas podem ser correlacionadas nos registros.",
+    "evidence": "Registro resumido com resultado da correlação e política de retenção.",
+    "acceptance": "Eventos relevantes são rastreáveis sem publicação de tokens ou segredos; contagem sozinha não encerra a análise.",
+    "impact": "Armazenamento, processamento, revisão e custo de retenção.",
+    "lab_status": "Auditoria declarativa: 91 linhas na rodada de 08/10 e 85 na instalação limpa de 09/10, conforme evidências da autora; correlação manual, completude e retenção pendentes.",
+    "decision_refs": [
+      "D11",
+      "D12"
+    ],
+    "source_refs": [
+      "R02"
+    ]
+  },
+  {
+    "id": "BP15",
+    "priority": "P1",
+    "title": "Reduzir privilégios dos containers",
+    "risk": "Comprometimento da aplicação permite escalada ou alterações desnecessárias.",
+    "practice": "Executar sem root, sem escalada, com capacidades removidas, seccomp e escrita restrita ao necessário.",
+    "verify": "Revisar securityContext e admissão; verificar comportamento do workload com restrições.",
+    "evidence": "Manifest e registro de execução sob perfil restrito.",
+    "acceptance": "Aplicação opera com privilégios justificados; exceções são registradas com risco e revisão.",
+    "impact": "Algumas imagens precisam de adaptação de permissões e caminhos de escrita.",
+    "lab_status": "Restrições e Pod Security restricted configurados; workloads executaram na rodada real de 09/10/2026. Não houve teste de escape ou avaliação completa de endurecimento.",
+    "decision_refs": [
+      "D08"
+    ],
+    "source_refs": [
+      "R19"
+    ]
+  },
+  {
+    "id": "BP16",
+    "priority": "P1",
+    "title": "Verificar imagens e dependências",
+    "risk": "Versão vulnerável ou imagem alterada compromete o controle aplicado.",
+    "practice": "Inventariar versões, fixar referência reproduzível e revisar vulnerabilidades conforme contexto.",
+    "verify": "Registrar digest e executar varredura; avaliar achados e correções com responsável.",
+    "evidence": "Inventário, relatório de varredura e tratamento de achados.",
+    "acceptance": "Dependências conhecidas e achados relevantes tratados ou explicitamente aceitos com justificativa e prazo.",
+    "impact": "Atualização e correção recorrentes; possível incompatibilidade ao atualizar.",
+    "lab_status": "Digest OpenBao observado no diagnóstico anterior e registrado na arquitetura; tags ainda usadas no script. Não houve verificação independente da cadeia de fornecimento nem varredura de vulnerabilidades.",
+    "decision_refs": [
+      "D14"
+    ],
+    "source_refs": [
+      "R19"
+    ]
+  },
+  {
+    "id": "BP17",
+    "priority": "P1",
+    "title": "Proteger disponibilidade e recuperação",
+    "risk": "Reinício, perda de armazenamento ou falha de dependência interrompe acesso.",
+    "practice": "Definir persistência, recuperação, backup, unseal e disponibilidade de acordo com a criticidade.",
+    "verify": "Simular reinício e restauração em laboratório apropriado; medir recuperação.",
+    "evidence": "Plano e resultado de teste de recuperação, sem chaves.",
+    "acceptance": "Perda ou recuperação atende requisito definido; limitações são conhecidas antes da adoção.",
+    "impact": "Redundância e backup consomem recursos e trabalho operacional.",
+    "lab_status": "emptyDir é descartável; HA, backup e recuperação persistente fora do laboratório atual.",
+    "decision_refs": [
+      "D09"
+    ],
+    "source_refs": [
+      "R02",
+      "R09"
+    ]
+  },
+  {
+    "id": "BP18",
+    "priority": "P1",
+    "title": "Controlar recursos e abuso de solicitações",
+    "risk": "Carga ou falha de consumidor esgota recursos e degrada comunicação.",
+    "practice": "Definir limites, observabilidade e estratégia de tentativas; avaliar rate limiting no ponto adequado.",
+    "verify": "Observar consumo e executar carga controlada com autorização e limites conhecidos.",
+    "evidence": "Registro de recursos, erros e resultado do ensaio controlado.",
+    "acceptance": "Saturação é detectável e o comportamento em falha é conhecido; não inferir proteção DoS apenas de limits.",
+    "impact": "Limites podem reduzir throughput; precisam de ajuste por demanda.",
+    "lab_status": "Requests/limits definidos; carga e DoS não testados.",
+    "decision_refs": [
+      "D04"
+    ],
+    "source_refs": [
+      "R09"
+    ]
+  },
+  {
+    "id": "BP19",
+    "priority": "P1",
+    "title": "Medir impacto sobre desempenho e operação",
+    "risk": "Decisões de segurança são julgadas só por percepção ou comparação desigual.",
+    "practice": "Comparar cenários equivalentes e separar latência, erros, consumo e esforço operacional.",
+    "verify": "Repetir mesma carga, versões e período; registrar p50/p95, erros, CPU/memória e ações de manutenção.",
+    "evidence": "Tabela antes/depois com método, amostras e condições; não incluir resultados inventados.",
+    "acceptance": "O impacto é descrito com dados e limites acordados; ganhos ou perdas não são presumidos.",
+    "impact": "Coleta adicional e desenho de experimento; segurança pode custar recursos ou evitar retrabalho.",
+    "lab_status": "Protocolo documentado; medições ainda não realizadas.",
+    "decision_refs": [
+      "D12"
+    ],
+    "source_refs": [
+      "R14"
+    ]
+  },
+  {
+    "id": "BP20",
+    "priority": "P0",
+    "title": "Executar testes positivos e negativos",
+    "risk": "Controle parece correto no arquivo mas falha em operação ou bloqueia o acesso legítimo.",
+    "practice": "Associar cada item do checklist a teste e critério; confirmar serviço saudável antes de interpretar bloqueio.",
+    "verify": "Executar matriz e investigar falhas sem remover controles apenas para obter PASS.",
+    "evidence": "Comando, data, ambiente, resultado e evidência revisada.",
+    "acceptance": "Conclusão distingue configuração escrita, teste executado e resultado comprovado.",
+    "impact": "Esforço de teste e manutenção da matriz após mudanças.",
+    "lab_status": "13 testes locais aprovados e 16 critérios da suíte Kubernetes aprovados na instalação limpa de 09/10/2026, conforme prints recebidos e conferidos.",
+    "decision_refs": [
+      "D12"
+    ],
+    "source_refs": [
+      "R07",
+      "R15"
+    ]
+  },
+  {
+    "id": "BP21",
+    "priority": "P0",
+    "title": "Tratar gaps, exceções e responsabilidades",
+    "risk": "Não conformidade é esquecida ou não aplicável é usado para esconder falha.",
+    "practice": "Atribuir responsável, ação, prazo, justificativa e revisão a cada pendência e exceção.",
+    "verify": "Revisar formulário de avaliação e verificar evidência/justificativa dos estados.",
+    "evidence": "Formulário versionado e plano de ações.",
+    "acceptance": "P0 sem evidência permanece pendente; exceção não equivale a teste aprovado nem elimina risco.",
+    "impact": "Coordenação e acompanhamento; documentação passa a fazer parte da operação.",
+    "lab_status": "Formulário e verificador documental incluídos; preenchimento é responsabilidade da revisão.",
+    "decision_refs": [
+      "D08",
+      "D12"
+    ],
+    "source_refs": [
+      "R05"
+    ]
+  },
+  {
+    "id": "BP22",
+    "priority": "P1",
+    "title": "Reavaliar após mudanças e incidentes",
+    "risk": "Checklist fica desatualizado diante de novos endpoints, versões ou consumidores.",
+    "practice": "Definir gatilhos de revisão: mudança de CNI, identidade, CA, política, componente, exposição ou incidente.",
+    "verify": "Identificar mudança e repetir itens/testes afetados; revisar periodicidade conforme criticidade.",
+    "evidence": "Histórico de revisão com alteração, testes repetidos e conclusões.",
+    "acceptance": "Estado de conformidade tem data e contexto; mudança relevante invalida evidências afetadas até nova verificação.",
+    "impact": "Manutenção contínua, proporcional ao risco.",
+    "lab_status": "Gatilhos documentados; integração a CI/CD e acompanhamento contínuo não implementados.",
+    "decision_refs": [
+      "D14"
+    ],
+    "source_refs": [
+      "R05",
+      "R12"
+    ]
+  },
+  {
+    "id": "BP23",
+    "priority": "P0",
+    "title": "Distinguir dados e credenciais",
+    "risk": "Proteger categorias inadequadamente ou ignorar o poder de acesso de uma credencial.",
+    "practice": "Classificar dado pessoal, pessoal sensível, credencial e informação técnica; definir tratamento por risco e finalidade.",
+    "verify": "Revisar inventário de campos e executar simulação de exposição por log com marcadores fictícios.",
+    "evidence": "Inventário classificado e resultado leak_demo, sem valores privados.",
+    "acceptance": "Categorias e sobreposições são explícitas; credenciais e dados restritos não aparecem na saída operacional.",
+    "impact": "Revisão de campos e manutenção da classificação.",
+    "lab_status": "Demonstração local de log incluída; classificação do ambiente real pendente.",
+    "decision_refs": [
+      "D11"
+    ],
+    "source_refs": [
+      "R16",
+      "R17",
+      "R18"
+    ]
+  },
+  {
+    "id": "BP24",
+    "priority": "P0",
+    "title": "Manter um titular geral e limitar administração",
+    "risk": "Dispersão de privilégios, conta compartilhada e acesso excessivo a dados e infraestrutura.",
+    "practice": "Um titular humano ativo de administração geral; identidades individuais e permissões por tarefa; revisar caminhos equivalentes de elevação.",
+    "verify": "Inventariar titulares e permissões globais, políticas wildcard, bind/escalate/impersonate, criação de workloads e acesso ao host; testar contas limitadas.",
+    "evidence": "Inventário de concessões, responsável global, processo de substituição e testes de negação.",
+    "acceptance": "Um único titular geral ativo; demais identidades sem privilégio global ou equivalente injustificado; revisão de substituição e recuperação documentada.",
+    "impact": "Coordenação de concessões e risco de indisponibilidade do titular; acesso de recuperação precisa de controle.",
+    "lab_status": "Regra documental proposta; verificações RBAC de reader/reviewer aprovadas em 09/10/2026. Unicidade de administrador e governança institucional não verificadas.",
+    "decision_refs": [
+      "D08"
+    ],
+    "source_refs": [
+      "R05",
+      "R02"
+    ]
+  },
+  {
+    "id": "BP25",
+    "priority": "P1",
+    "title": "Atualizar com teste, rastreabilidade e retorno",
+    "risk": "Correções ausentes ou atualização introduz regressão e permissões excessivas.",
+    "practice": "Inventário de versões, revisão de correções, ensaio controlado, plano de retorno e repetição de testes afetados.",
+    "verify": "Registrar mudança e repetir TLS, login, autorização, rede e tokens; conferir revisão de achados de vulnerabilidade.",
+    "evidence": "Versões anterior/posterior, motivo, testes, decisão e pendências.",
+    "acceptance": "Mudança tem responsável e evidências; falha não é contornada removendo proteção de modo permanente.",
+    "impact": "Janela de manutenção e trabalho de compatibilidade/retorno.",
+    "lab_status": "Configurações de armazenamento e auditoria corrigidas para OpenBao 2.7.1, com instalação limpa e suíte aprovadas. Migração entre versões, rollback e varredura de vulnerabilidades não ensaiados.",
+    "decision_refs": [
+      "D14"
+    ],
+    "source_refs": [
+      "R09",
+      "R12"
+    ]
+  },
+  {
+    "id": "BP26",
+    "priority": "P0",
+    "title": "Justificar o conjunto mínimo de ferramentas",
+    "risk": "Complexidade e privilégios adicionados sem benefício demonstrável.",
+    "practice": "Antes de adicionar ou manter um componente, registrar gap, alternativas, custo, responsável e condição de remoção.",
+    "verify": "Revisar D01-D14 e inventário de componentes; justificar também o que não foi incluído.",
+    "evidence": "Registro de decisão e teste que responde ao risco.",
+    "acceptance": "Cada componente tem necessidade explícita; simplificação não deixa requisito obrigatório sem tratamento.",
+    "impact": "Pode adiar adoção e exige comparação de opções.",
+    "lab_status": "Regra documental entregue; revisão humana do contexto permanece necessária.",
+    "decision_refs": [
+      "D04",
+      "D10",
+      "D13"
+    ],
+    "source_refs": [
+      "R10"
+    ]
+  },
+  {
+    "id": "BP27",
+    "priority": "P0",
+    "title": "Manter responsabilidade humana pela verificação",
+    "risk": "IA ou ferramenta fornece conclusão incorreta e ela é aceita sem examinar o fluxo.",
+    "practice": "Revisar sugestões, fonte original, premissas, positivos/negativos e causa do resultado.",
+    "verify": "Examinar evidência bruta e distinguir teste local simulado de cluster real.",
+    "evidence": "Registro de revisão humana, decisão e limitação.",
+    "acceptance": "Conformidade não depende apenas de opinião da IA, PASS ou ausência de alerta.",
+    "impact": "Tempo de revisão e necessidade de compreensão técnica.",
+    "lab_status": "Regra documental entregue; revisão humana do contexto permanece necessária.",
+    "decision_refs": [
+      "D12"
+    ],
+    "source_refs": [
+      "R15"
+    ]
+  },
+  {
+    "id": "BP28",
+    "priority": "P0",
+    "title": "Explicitar alternativas e efeitos de cada decisão",
+    "risk": "Escolha parece obrigatória e seus custos ou riscos ficam ocultos.",
+    "practice": "Registrar motivo, benefício esperado, efeito negativo, alternativa, fonte e condição de revisão.",
+    "verify": "Relacionar cada prática ao registro Dxx e conferir o limite da fonte usada.",
+    "evidence": "Decisão rastreável, documentação original e evidência contextual.",
+    "acceptance": "Fonte sustenta a afirmação feita; escolhas próprias são identificadas e podem ser reavaliadas.",
+    "impact": "Mais documentação, reduzindo decisões difíceis de revisar.",
+    "lab_status": "Regra documental entregue; revisão humana do contexto permanece necessária.",
+    "decision_refs": [
+      "D01",
+      "D13",
+      "D14"
+    ],
+    "source_refs": [
+      "R02",
+      "R05"
+    ]
+  }
+]

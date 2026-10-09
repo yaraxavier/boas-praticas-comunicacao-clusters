@@ -1,0 +1,11 @@
+.state/
+__pycache__/
+*.pyc
+*.bak
+.env
+.env.*
+*.key
+*.pem
+kubeconfig*
+evidence/*
+!evidence/public/

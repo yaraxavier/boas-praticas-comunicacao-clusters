@@ -1,0 +1,22 @@
+[
+  {
+    "original": "image(20261009-111003).png",
+    "arquivo": "01-extracao-e-comandos.png",
+    "sha256": "12af9f9018bc14a0ecfabf770fa116cb2499bd4e8de5a9c23199c61b907ef7d8"
+  },
+  {
+    "original": "image(20261009-111022).png",
+    "arquivo": "02-criacao-clusters.png",
+    "sha256": "debdee724c132f520202cf77f8a1ec96e033301758b22bed56a987b99b9a62e9"
+  },
+  {
+    "original": "image(20261009-111036).png",
+    "arquivo": "03-setup-e-testes.png",
+    "sha256": "062f7b06f2f1c46d232707e129d19440284c1ba0bf386caf556217971274980d"
+  },
+  {
+    "original": "image(20261009-111102).png",
+    "arquivo": "04-resultado-completo.png",
+    "sha256": "c1c6d857901c90f5e9cc5312c46ff3866dd947c69929c313d5603112d138d9d3"
+  }
+]
