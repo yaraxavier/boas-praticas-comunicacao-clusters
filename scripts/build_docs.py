@@ -63,6 +63,14 @@ def render(source):
     return '\n'.join(out)
 
 def main():
+    # Uma única árvore publicável; originais de auditoria permanecem em evidence/public.
+    shutil.copytree(ROOT/'evidence/public', ASSETS/'evidence/public', dirs_exist_ok=True)
+    # Remover somente as quatro cópias legadas geradas por versões anteriores.
+    legacy=ASSETS/'evidencias'
+    for name in ('01-extracao-e-comandos.png','02-criacao-clusters.png','03-setup-e-testes.png','04-resultado-completo.png'):
+        (legacy/name).unlink(missing_ok=True)
+    if legacy.is_dir() and not any(legacy.iterdir()):
+        legacy.rmdir()
     sections=[]
     for ident,title,path in CHAPTERS:sections.append('<section id="'+ident+'" aria-label="'+title+'">'+render(ROOT/path)+'</section>')
     base=ROOT/'evidence/public/2026-10-09-instalacao-limpa'
@@ -70,7 +78,7 @@ def main():
     figures=[('01-extracao-e-comandos.png',(0,620,1080,965),'Figura 1 · Extração e comando de reprodução','A pasta nova e o bloco preflight → setup → test. O print integral preserva a tentativa anterior sem o ZIP.'),('02-criacao-clusters.png',(0,380,1050,1038),'Figura 2 · Criação de A e B','Registro de criação dos dois clusters kind.'),('03-setup-e-testes.png',(0,466,1080,746),'Figura 3 · Setup concluído e dez Jobs PASS','Rodada 1791544005. A sequência exibida não contém intervenção corretiva entre setup e test.'),('04-resultado-completo.png',(0,401,1370,990),'Figura 4 · Resultado final e limitações','16 critérios true; 85 linhas de auditoria; 09/10/2026 às 08:08:55 Brasília. Limites de NodePort e teste local mantidos.')]
     cards=[]
     for name,(x0,y0,x1,y1),title,caption in figures:
-        dest=ASSETS/'evidencias'/name;dest.parent.mkdir(exist_ok=True);shutil.copyfile(base/name,dest)
+        dest=ASSETS/base.relative_to(ROOT)/name
         href=dest.relative_to(DOCS).as_posix();w=x1-x0;h=y1-y0
         cards.append(f'<figure><h3>{title}</h3><div class="crop" style="aspect-ratio:{w}/{h}"><img src="{href}" alt="{html.escape(caption)}" style="width:{1920/w*100:.6f}%;left:{-x0/w*100:.6f}%;top:{-y0/h*100:.6f}%"></div><figcaption>{caption} <a href="{href}">Abrir original integral</a></figcaption></figure>')
     sections.insert(9,'<section id="evidencias"><h2>Evidências da instalação limpa</h2><p>Fotos recebidas da autora e conferidas visualmente. Os enquadramentos abaixo preservam os pixels originais; somente a área exibida muda. Logs e JSON originais ainda não foram transferidos.</p>'+''.join(cards)+'<p><a href="'+url(str((base/'RESULTADO_TRANSCRITO.json').relative_to(ROOT)),ROOT/'README.md')+'">JSON transcrito</a> · <a href="'+url(str((base/'MANIFESTO.json').relative_to(ROOT)),ROOT/'README.md')+'">Manifesto dos originais</a></p></section>')

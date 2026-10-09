@@ -31,3 +31,12 @@ Os testes locais verificam o cliente e utilitários. Os testes reais verificam o
 Os PNGs originais ficam junto da rodada em `evidence/public/`. A página de leitura enquadra apenas a área relevante de cada figura, com legenda e link para o original integral. O enquadramento é feito na apresentação, sem reconstruir texto ou modificar pixels. As cópias em `docs/assets/` tornam o site independente de arquivos fora da pasta publicada.
 
 Para atualizar: editar os Markdown, executar `python3 scripts/build_docs.py` e revisar a página. Não editar o HTML gerado manualmente.
+
+
+## Período da pesquisa e datas das evidências
+
+O período setembro–outubro de 2026 descreve o desenvolvimento do trabalho. O diretório `2026-10-09-instalacao-limpa` identifica a data real daquela execução, por isso não deve ser renomeado para acompanhar uma mudança editorial do título ou da apresentação.
+
+`MANIFESTO.json` registra hashes dos prints recebidos. Os JSONs de resultado preservam os metadados observados na execução. Alterar texto de apresentação não altera a execução nem os pixels das imagens; manter esses hashes é o comportamento correto. Se houver uma nova execução, criar outro registro, sem reescrever o anterior.
+
+Para o site há uma única árvore de evidências em `docs/assets/evidence/public/`, copiada pelo gerador a partir de `evidence/public/`. A cópia é necessária porque o GitHub Pages publica somente `/docs`. As figuras enquadradas e os links de download apontam para essa mesma árvore. A pasta redundante `docs/assets/evidencias/` foi removida.
