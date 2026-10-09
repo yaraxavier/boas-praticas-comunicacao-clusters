@@ -1,29 +1,33 @@
-# Boas práticas de segurança na comunicação entre clusters Kubernetes
+# BOAS PRÁTICAS DE SEGURANÇA NA COMUNICAÇÃO ENTRE CLUSTERS
 
-Desenvolvimento: setembro a outubro de 2026 • POC A–B • laboratório descartável com dados fictícios.
+DESENVOLVIMENTO: SETEMBRO A OUTUBRO DE 2026• LABORATÓRIO DESCARTÁVEL COM DADOS FICTÍCIOS.
 
-A proposta é um modelo verificável: identificar fluxos e riscos, escolher controles mínimos, testar permissões e recusas, registrar evidências e revisar limitações. OpenBao demonstra gestão de segredos nessa comunicação. A arquitetura não pretende reproduzir a infraestrutura de produção do GovHub, MGI ou Ipea.
+A comunicação entre clusters exige atenção às permissões, às credenciais e aos caminhos de acesso. Pequenas decisões de configuração podem permitir acessos indevidos ou expor informações, mesmo quando existem ferramentas de segurança.
+
+A proposta é transformar boas práticas em decisões justificadas e verificáveis: identificar fluxos e riscos, escolher controles necessários, testar acessos e recusas, registrar evidências e revisar limitações. O OpenBao apoia a gestão de segredos nessa comunicação. Documentações públicas de alguns órgãos foram utilizadas como referências para o estudo.
 
 ## Trajetória do trabalho
 
-A pesquisa foi desenvolvida entre setembro e outubro de 2026, incluindo definição do problema, estudo das boas práticas, decisões de arquitetura, implementação e revisão da POC. A validação final é uma etapa desse percurso, não a data de início do trabalho.
+A pesquisa reuniu definição do problema, estudo das boas práticas, decisões de arquitetura, implementação e revisão da POC. Cada escolha foi analisada considerando o risco tratado, os benefícios, as limitações e as alternativas disponíveis. Os testes permitem confrontar o modelo proposto com o comportamento observado no laboratório.
 
 ## Estado da entrega
 
-Instalação limpa executada pela autora em 09/10/2026, com setup concluído e suíte aprovada: 16 critérios true, dez Jobs PASS e 85 linhas de auditoria, às 11:08:55 UTC (08:08:55 Brasília). Os [quatro prints e a transcrição](evidence/public/2026-10-09-instalacao-limpa/README.md) foram conferidos. Essa rodada encerra a pendência de instalação limpa no ambiente testado. A execução anterior após correções manuais permanece registrada separadamente. O terceiro cluster está fora do escopo; não há certificação de produção ou do modelo completo.
+A instalação limpa foi concluída e a suíte apresentou 16 critérios atendidos e dez Jobs com resultado PASS. Foram registradas 85 linhas de auditoria.
+
+Os [quatro prints e a transcrição dos resultados](evidence/public/2026-10-09-instalacao-limpa/README.md) documentam essa execução. A documentação apresenta os cenários avaliados, as respostas obtidas e as limitações observadas. As revisões anteriores permanecem registradas para acompanhar a evolução da POC.
 
 ## Acesso à documentação
 
 Repositório: https://github.com/yaraxavier/boas-praticas-comunicacao-clusters
 
-Comece pelo [índice completo](docs/README.md). A versão de leitura está em `docs/index.html`, pronta para GitHub Pages. Abra esse arquivo no navegador após extrair o pacote. O endereço público será informado pelo GitHub depois da ativação; ainda não há site publicado.
+Comece pelo [índice completo](docs/README.md). A [versão HTML](docs/index.html) reúne a documentação em uma página de leitura. Para consultá-la localmente, abra o arquivo `docs/index.html` no navegador após baixar e extrair o repositório.
 
 ## Onde está cada coisa
 
 | Pasta ou arquivo | Conteúdo |
 |---|---|
 | `README.md` | Entrada do repositório e estado atual |
-| `docs/modelo/` | Teoria e referência institucional |
+| `docs/modelo/` | Teoria e referências utilizadas |
 | `docs/poc/` | Arquitetura, operação, testes e correções |
 | `docs/index.html` | Página completa de leitura e figuras enquadradas |
 | `scripts/` | Automação da POC, checklist e geração da página |
@@ -36,7 +40,7 @@ Comece pelo [índice completo](docs/README.md). A versão de leitura está em `d
 ## Ordem de leitura
 
 1. [Modelo geral e teoria](docs/modelo/MODELO_GERAL.md).
-2. [Referência GovHub, MGI e Ipea](docs/modelo/REFERENCIA_GOVHUB.md).
+2. [Referências públicas utilizadas no estudo](docs/modelo/REFERENCIA_GOVHUB.md).
 3. [Arquitetura implementada](docs/poc/ARQUITETURA.md).
 4. [Testes, respostas e limitações](docs/poc/TESTES_E_RESULTADOS.md).
 5. [Revisões e correções](docs/poc/REVISOES.md).
